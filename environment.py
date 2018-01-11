@@ -75,8 +75,8 @@ class PaperRaceEnv:
 
 
         # van egy referencia lepessor ami valahogy beér a célba (palya4) :
-        self.ref_actions = np.array([0, -180, -95, -95, -90, -95])
-
+        #self.ref_actions = np.array([0, -180, -95, -95, -90, -95])
+        self.ref_actions = np.array([0, -180, -96, -97, -100, -100, -100])
         # van egy referencia lepessor ami valahogy beér a célba (palya5) :
         # self.ref_actions = np.array([0, 150, 180, -160, -160, -160, -150, -90, -90, -110, -110, -120, -110, -110, 0,
         #                             90, -90, 90, -140, 90, 110, 90, 120, 120, 120, 120, 100, -20, -10, 0, 0, 0])
@@ -139,8 +139,13 @@ class PaperRaceEnv:
             # ha atszakit egy szakaszhatart, es ez az utolso is, tehat pont celbaert es ugy esett le a palyarol:
             if crosses and section_nr == len(self.sections) - 1:
                 print("\033[91m {}\033[00m" .format("CELBAERT KI"))
-                reward = -t2 - 3
+                reward = -t2 - 1
                 end = True
+            else:
+                print("\033[91m {}\033[00m".format("LEMENT"))
+                reward = -1
+                end = True
+            """
             # nem ert celba:
             else:
                 # eloszor meg kell hatarozni hogy hol megy le a palyarol:
@@ -216,12 +221,10 @@ class PaperRaceEnv:
                 # Ezt az egeszet augy nem igy kellene csinalni, hanem ug hogy ilyenkor meghivja sajat magat
                 # ez a step fv. nem ilyen esetekeles azon belul esetekkel benazni... Csak nem vok benne biztos hogy
                 # kell az ilyet csinalni, inkabb benzok ezzel
-
-
+"""
 
         # Ha nem ment ki a palyarol:
         else:
-
             # megnezzuk hol jarunk (get_dist.. majd atirni ezt a fugvenyt)
             # print("PosOld:", pos_old, "PosNew:", pos_new)
             curr_dist_in_old, pos_temp_in_old, curr_dist_out_old, pos_temp_out_old = self.get_ref(pos_old)
@@ -230,7 +233,7 @@ class PaperRaceEnv:
             # print(curr_dist_in_old, curr_dist_in_new)
             curr_dist_in = curr_dist_in_old
             reward = -1
-
+            """
             # ha visszafordulna:
             if curr_dist_in_new < curr_dist_in_old:
                 print("\033[96m {}\033[00m".format("FORDUL"))
@@ -258,12 +261,9 @@ class PaperRaceEnv:
                 # Es akkor most persze mindent megint meg kellene nezni, hogy mivan ha ezzel a lepessel most kiesne, vagy
                 # szakaszt lepne, vegy celbaerne vagy stb... szoval az egeszet at ken irni, hogy ilyenkor meghivhassa
                 # sajat magat a step fv. vagy valmai ilyesmi... nemtom
-
-
-
-
+            """
             # ha a 0. szakaszt, azaz startvonalat szakit at (nem visszafordult hanem eleve visszafele indul):
-            elif (crosses and section_nr == 0):
+            if (crosses and section_nr == 0):
                 print("VISSZAKEZD")
                 reward = -33
                 curr_dist_in = 0.1
@@ -275,12 +275,13 @@ class PaperRaceEnv:
                 reward = -t2
                 curr_dist_in, pos_in, curr_dist_out, pos_out = self.get_ref(pos_new)
                 end = True
-
+            """
             #ha atszakitunk egy szakaszt (senem elso, senem utolso) kapjon kis jutalmat. hatha segit tanulaskor a hulyejenek
             elif crosses and section_nr < len(self.sections)-1:
                 print("SZAKASZ")
                 curr_dist_in, pos_in, curr_dist_out, pos_out = self.get_ref(pos_new)
                 reward = 1
+            """
 
             X = np.array([pos_temp_in_old[0], pos_temp_out_old[0]])
             Y = np.array([pos_temp_in_old[1], pos_temp_out_old[1]])
@@ -502,8 +503,14 @@ class PaperRaceEnv:
         r_in = 0
         while not np.any(tmp_in):
             r_in = r_in + 1 # növeljük a disc sugarát
-            tmp_in = trk[pos_new[1] - r_in:pos_new[1] + r_in + 1, pos_new[0] - r_in:pos_new[0] + r_in + 1] # vesszük az aktuális pozíció körüli 2rx2r-es négyzetet
             mask_in = disk(r_in)
+            tmp_in = trk[pos_new[1] - r_in:pos_new[1] + r_in + 1, pos_new[0] - r_in:pos_new[0] + r_in + 1] # vesszük az aktuális pozíció körüli 2rx2r-es négyzetet
+            # neha a tmp_in nem negyzetes alaku... (MIÉÉÉÉ???) mindenesetre ezt csekkoljuk:
+            if not tmp_in.shape[0] == tmp_in.shape[1]:
+                tmp_in0 = np.zeros((2*r_in + 1, 2*r_in + 1))
+                tmp_in0[0:tmp_in.shape[0], 0:tmp_in.shape[1]] =tmp_in
+                tmp_in = tmp_in0
+
             tmp_in = np.multiply(mask_in, tmp_in) # maszkoljuk a disc-kel
             tmp_in[tmp_in != col_in] = 0 # megnézzük, hogy van -e benne belso szin
         indices_in = [p[0] for p in np.nonzero(tmp_in)] # ha volt benne piros, akkor lekérjük a pozícióját
@@ -516,8 +523,14 @@ class PaperRaceEnv:
         r_out = 0
         while not np.any(tmp_out):
             r_out = r_out + 1  # növeljük a disc sugarát
-            tmp_out = trk[pos_new[1] - r_out:pos_new[1] + r_out + 1, pos_new[0] - r_out:pos_new[0] + r_out + 1]  # vesszük az aktuális pozíció körüli 2rx2r-es négyzetet
             mask_out = disk(r_out)
+            tmp_out = trk[pos_new[1] - r_out:pos_new[1] + r_out + 1, pos_new[0] - r_out:pos_new[0] + r_out + 1]  # vesszük az aktuális pozíció körüli 2rx2r-es négyzetet
+            # neha a tmp_in nem negyzetes alaku... (MIÉÉÉÉ???) mindenesetre ezt csekkoljuk:
+            if not tmp_out.shape[0] == tmp_in.shape[1]:
+                tmp_out0 = np.zeros((2*r_out + 1, 2*r_out + 1))
+                tmp_out0[0:tmp_out.shape[0], 0:tmp_out.shape[1]] = tmp_out
+                tmp_out = tmp_out0
+
             tmp_out = np.multiply(mask_out, tmp_out)  # maszkoljuk a disc-kel
             tmp_out[tmp_out != col_out] = 0  # megnézzük, hogy van -e benne kulso szin
         indices_out = [p[0] for p in np.nonzero(tmp_out)]  # ha volt benne piros, akkor lekérjük a pozícióját
@@ -536,10 +549,13 @@ class PaperRaceEnv:
         else:
             # ha nincsennek a kapott potok a dict-ben, akkor a külsö-belsö pontokat osszekoto szakaszon levo ponthoz
             # kerunk ref-et. Ez sem igazan jo megoldas dehat...
-            pos_fel = pos_out + (pos_in - pos_out) * 0.5 # rnd.uniform(0.4, 0.6)
+  #ITT EZ A BUZI VEGTELEN REKURZIOBA KERUL HA KOZEL LEPUNK A FALHOZ pl az envterstben az elso lepes 15, es utana pl.5
+            pos_fel = pos_out + (pos_in - pos_out) * 0.5 #rnd.uniform(0.4, 0.6)
             curr_dist_in, pos_in, curr_dist_out, pos_out = self.get_ref(pos_fel)
 
         return curr_dist_in, pos_in, curr_dist_out, pos_out
+
+
 
     """
     def get_reward(self, pos_old, pos_new, step_nr):
@@ -603,8 +619,18 @@ class PaperRaceEnv:
         # amenyivel az aktualis ebben a lepesben jobb, azaz kevesebb ido alatt tette meg ezt a elmozdulat, mint a ref
         # lepessor, az:
         rew_dt = -ref_delta + act_rew
-        # print("az aktualis, ebben a lepesben megtett tavot ennyivel kevesebb ido alatt tette meg mint a ref. (ha (-) akkor meg több):", rew_dt)
+        #print("az aktualis, ebben a lepesben megtett tavot ennyivel kevesebb ido alatt tette meg mint a ref. (ha (-) akkor meg több):", rew_dt)
 
+        # Ha kimegyünk a pályáról akkor legyen a reward az hogy mennyi időbe telne onnan ahol kimentünk a referencia
+        # lépéssornak beérni
+        ontrack, inside, outside = self.is_on_track(pos_new)
+        print("pályán van?:", ontrack)
+
+        if not ontrack:
+            # a kieses helyetol a ref lepessorral, hatra levo ido:
+            remain_time = self.ref_steps[-1] - yinterp[0]
+            #print("a kiese helyetol e ref lepessorral hatra levo ido:", remain_time )
+            rew_dt = -remain_time
         return rew_dt
 
     def __get_ref_dicts(self, ref_actions):
