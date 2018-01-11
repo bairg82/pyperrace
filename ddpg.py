@@ -345,7 +345,7 @@ def train(sess, env, args, actor, critic, actor_noise):
         print("Random Episode2:", rand_episode2)
 
         # aztan kesobb, az epizodok elorehaladtaval, csokkeno valoszinuseggel, random lepesek
-        rand_stp_for_exp = (int(args['max_episodes']) - (20 * i)) / int(args['max_episodes'])
+        rand_stp_for_exp = (int(args['max_episodes']) - (50 * i)) / int(args['max_episodes'])
         print("Random Step", rand_stp_for_exp)
 
         #egy egy epizódon belül ennyi lépés van maximum:
@@ -388,7 +388,7 @@ def train(sess, env, args, actor, critic, actor_noise):
             #megnézzük mit mond a környezet az adott álapotban az adott action-ra:
             #s2, r, terminal, info = env.step(a)
             v_new, pos_new, reward, end, section_nr = env.step(gg_action, v, pos, draw, color)
-            t_diff = env.get_time_diff(pos, pos_new, reward)
+            t_diff = env.get_time_diff(pos, pos_new, reward, end)
             #megintcsak a kétfelől összemásolgatott küdok miatt, feleltessünkk meg egymásnak változókat:
             s2 = [v_new[0], v_new[1], pos_new[0], pos_new[1]]
             r = t_diff
@@ -400,7 +400,7 @@ def train(sess, env, args, actor, critic, actor_noise):
 
             # Keep adding experience to the memory until there are at least minibatch size samples, És amig a
             # tanulas elejen a random lepkedos fazisban vagyunk.
-            if replay_buffer.size() > int(args['minibatch_size']) and not rand_episode:
+            if replay_buffer.size() > int(args['minibatch_size']): # and not rand_episode:
                 s_batch, a_batch, r_batch, t_batch, s2_batch = replay_buffer.sample_batch(int(args['minibatch_size']))
 
                 # Calculate targets
@@ -507,11 +507,11 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='provide arguments for DDPG agent')
 
     # agent parameters
-    parser.add_argument('--actor-lr', help='actor network learning rate',   default=0.00002)
-    parser.add_argument('--critic-lr', help='critic network learning rate', default=0.001)
+    parser.add_argument('--actor-lr', help='actor network learning rate',   default=0.0001)
+    parser.add_argument('--critic-lr', help='critic network learning rate', default=0.01)
     parser.add_argument('--gamma', help='discount factor for critic updates', default=0.998)
     parser.add_argument('--tau', help='soft target update parameter', default=0.001)
-    parser.add_argument('--buffer-size', help='max size of the replay buffer', default=1000)
+    parser.add_argument('--buffer-size', help='max size of the replay buffer', default=20000)
     parser.add_argument('--minibatch-size', help='size of minibatch for minibatch-SGD', default=32)
 
     # run parameters

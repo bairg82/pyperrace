@@ -582,7 +582,7 @@ class PaperRaceEnv:
         return reward
     """
 
-    def get_time_diff(self, pos_old, pos_new, act_rew):
+    def get_time_diff(self, pos_old, pos_new, act_rew, end):
         """Reward ado fuggveny. Egy adott lepeshez (pos_old - pos new) ad jutalmat. Eredetileg az volt hogy -1 azaz mint
         mint eltelt idő. Most megnezzuk mivan ha egy referencia lepessorhoz kepest a nyert vagy veszetett ido lesz.
         kb. mint a delta_time channel a MOTEC-ben
@@ -593,7 +593,6 @@ class PaperRaceEnv:
 
         visszater a rew_dt, ami azt adja, hogy a referencia lepessorhoz kepest ez mennyivel tobb ido"""
 
-        curr_dist_in, curr_pos_in, curr_dist_out, curr_pos_out = self.get_ref(pos_new)
         pre_dist_in, pre_pos_in, pre_dist_out, pre_pos_out = self.get_ref(pos_old)
 
         # amennyi ido (lepes) alatt a ref_actionok, a pre_dist-ből a curr_dist-be eljutottak--------------------------
@@ -601,36 +600,39 @@ class PaperRaceEnv:
         x = self.ref_dist
         y = self.ref_steps
 
-        xvals = np.array([pre_dist_in, curr_dist_in])
-        print("elozo es aktualis tav:", xvals)
+        if not end:
+            curr_dist_in, curr_pos_in, curr_dist_out, curr_pos_out = self.get_ref(pos_new)
 
-        # ezekre a tavolsagokra a referencia lepessor ennyi ido alaptt jutott el
-        yinterp = np.interp(xvals, x, y, 0)
-        # print("ref ennyi ido alatt jutott ezekre:", yinterp)
+            xvals = np.array([pre_dist_in, curr_dist_in])
+            print("elozo es aktualis tav:", xvals)
 
-        # tehat ezt a negyasau lepest a referencia ennyi ido alatt tette meg (- legyen, hogy a kisebb ido legyen a magasabb
-        # reward) :
-        ref_delta = -yinterp[1] + yinterp[0]
-        # print("a ref. ezen lepesnyi ideje:", ref_delta)
+            # ezekre a tavolsagokra a referencia lepessor ennyi ido alaptt jutott el
+            yinterp = np.interp(xvals, x, y, 0)
+            # print("ref ennyi ido alatt jutott ezekre:", yinterp)
 
-        # az atualis lepesben az eltelt ido nyilvan -1, illetve ha ido-bunti van akkor ennel tobb, eppen a reward
-        # print("elozo es aktualis lepes kozott eltelt ido:", act_rew)
+            # tehat ezt a negyasau lepest a referencia ennyi ido alatt tette meg (- legyen, hogy a kisebb ido legyen a magasabb
+            # reward) :
+            ref_delta = -yinterp[1] + yinterp[0]
+            # print("a ref. ezen lepesnyi ideje:", ref_delta)
 
-        # amenyivel az aktualis ebben a lepesben jobb, azaz kevesebb ido alatt tette meg ezt a elmozdulat, mint a ref
-        # lepessor, az:
-        rew_dt = -ref_delta + act_rew
-        #print("az aktualis, ebben a lepesben megtett tavot ennyivel kevesebb ido alatt tette meg mint a ref. (ha (-) akkor meg több):", rew_dt)
+            # az atualis lepesben az eltelt ido nyilvan -1, illetve ha ido-bunti van akkor ennel tobb, eppen a reward
+            # print("elozo es aktualis lepes kozott eltelt ido:", act_rew)
 
-        # Ha kimegyünk a pályáról akkor legyen a reward az hogy mennyi időbe telne onnan ahol kimentünk a referencia
-        # lépéssornak beérni
-        ontrack, inside, outside = self.is_on_track(pos_new)
-        print("pályán van?:", ontrack)
+            # amenyivel az aktualis ebben a lepesben jobb, azaz kevesebb ido alatt tette meg ezt a elmozdulat, mint a ref
+            # lepessor, az:
+            rew_dt = -ref_delta + act_rew
+            #print("az aktualis, ebben a lepesben megtett tavot ennyivel kevesebb ido alatt tette meg mint a ref. (ha (-) akkor meg több):", rew_dt)
 
-        if not ontrack:
+            # Ha kimegyünk a pályáról akkor legyen a reward az hogy mennyi időbe telne onnan ahol kimentünk a referencia
+            # lépéssornak beérni
+        else:
+            # a pre pos-nal a tavolsag: pre_dist_in, itt kell lekerdezni a ref lepessor idejet
+            yinterp = np.interp(pre_dist_in, x, y, 0)
             # a kieses helyetol a ref lepessorral, hatra levo ido:
-            remain_time = self.ref_steps[-1] - yinterp[0]
+            remain_time = self.ref_steps[-1] - yinterp
             #print("a kiese helyetol e ref lepessorral hatra levo ido:", remain_time )
             rew_dt = -remain_time
+
         return rew_dt
 
     def __get_ref_dicts(self, ref_actions):

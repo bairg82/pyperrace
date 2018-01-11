@@ -52,6 +52,13 @@ replay_buffer = ReplayBuffer(int(mem_size), int(random_seed))
 
 draw = True
 
+rndlep = int(input('Random input? 1=yes'))
+if rndlep == 1:
+    random = True
+else:
+    random = False
+
+
 for ep in range(episodes):
     env.reset()
     print("================EP.: ", ep) # epizód számának kiírása
@@ -68,7 +75,7 @@ for ep in range(episodes):
     end = False
     color = (0, 0, 1)
     step = 0
-    random = False
+
     while not end:
         step = step + 1
         if step == 1:
@@ -86,7 +93,7 @@ for ep in range(episodes):
         print("action: ", action, "-------------")
         gg_action = env.gg_action(action)  # action-höz tartozó vektor lekérése
         v_new, pos_new, reward, end, section_nr = env.step(gg_action, v, pos, draw, color)
-        t_diff = env.get_time_diff(pos, pos_new, reward)
+        t_diff = env.get_time_diff(pos, pos_new, reward, end)
         s = [v[0], v[1], pos[0], pos[1]]
         s2 = [v_new[0], v_new[1], pos_new[0], pos_new[1]]
         a = action
