@@ -662,6 +662,7 @@ class PaperRaceEnv:
 
         v = np.array(self.starting_spd)  # az elején a sebesség a startvonalra meroleges
         pos = np.array(self.starting_pos)  # kezdőpozíció beállítása
+        print("ref strt pos, v:", pos, v)
         epreward = 0
 
         steps_nr = range(0, len(ref_actions))

@@ -384,7 +384,7 @@ def train(sess, env, args, actor, critic, actor_noise):
             # Ha az adott felteltel teljesult korabban, es most egy random epizodban vagyunk, vagy nem random az epizod,
             # de a lepes random, na akkor randomot lepunk:
             if rand_episode or rand_step:
-                if j < env.ref_actions.size:
+                if rnd.uniform(0, env.ref_actions.size) < j < env.ref_actions.size:
                     a = int(np.random.normal(env.ref_actions[j], 10, size=1))
                 else:
                     a = int(actor.predict(np.reshape(s, (1, actor.s_dim))))

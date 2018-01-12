@@ -4,6 +4,8 @@ import matplotlib.pyplot as plt
 from environment import PaperRaceEnv
 from replay_buffer import ReplayBuffer
 
+import random as rnd
+
 trk_col = np.array([99, 99, 99]) # pálya színe (szürke)
 
 #sections = np.array([[350,  60, 350, 100],
@@ -66,9 +68,9 @@ for ep in range(episodes):
         plt.clf()
         env.draw_track()
     v = np.array(env.starting_spd)  # az elején a sebesség a startvonalra meroleges
-    #print(v)
     # ezt könnyen megváltoztatja, tulajdonképen csak arra jó, hogy nem 0
     pos = np.array(env.starting_pos)  # kezdőpozíció beállítása
+    #print("envtest start pos, v:", pos, v)
     reward = 0
     epreward = 0
     ref_dist = 0
@@ -81,14 +83,18 @@ for ep in range(episodes):
 
         if random:
             #action = int(np.random.randint(-180, 180, size=1))
-            if step < env.ref_actions.size:
+            lepestol = rnd.uniform(0, env.ref_actions.size)
+            #print(lepestol, env.ref_actions.size)
+            if (lepestol < step) and (step < env.ref_actions.size):
                 action = int(np.random.normal(env.ref_actions[step], 30, size=1))
+                print("range  rand action: ", action, "-------------")
             else:
-                action = int(np.random.randint(-180, 180, size=1))
+                action = env.ref_actions[step-1]# int(np.random.randint(-180, 180, size=1))
+                print("ref action: ", action, "-------------")
         else:
             action = int(input('Give inut (-180..180 number)'))
+            print("manual action: ", action, "-------------")
 
-        print("action: ", action, "-------------")
         gg_action = env.gg_action(action)  # action-höz tartozó vektor lekérése
         v_new, pos_new, reward, end, section_nr = env.step(gg_action, v, pos, draw, color)
         t_diff = env.get_time_diff(pos, pos_new, reward, end)
