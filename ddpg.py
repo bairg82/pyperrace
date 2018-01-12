@@ -50,6 +50,7 @@ class ActorNetwork(object):
 
     def __init__(self, sess, state_dim, action_dim, action_bound, learning_rate, tau):
         with tf.device(used_device):
+            self.sess = sess
             self.s_dim = state_dim
             self.a_dim = action_dim
             self.action_bound = action_bound
