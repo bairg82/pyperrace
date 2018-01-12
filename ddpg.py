@@ -1,4 +1,3 @@
-#proba janis
 """
 Implementation of DDPG - Deep Deterministic Policy Gradient
 Algorithm and hyperparameter details can be found here:
@@ -10,7 +9,19 @@ Author: Patrick Emami
 
 import tensorflow as tf
 import numpy as np
-import matplotlib.pyplot as plt #a kirajzoláshoz kell, de lassú szar
+
+"Ez a HPC-s verziÃ³"
+
+OnHPC = True
+
+if OnHPC:
+    use_matplotlib = False
+else:
+    use_matplotlib = True
+
+if use_matplotlib:
+    import matplotlib.pyplot as plt #a kirajzoláshoz kell, de lassú szar
+
 #import gym
 from environment import PaperRaceEnv
 #from gym import wrappers
@@ -79,17 +90,15 @@ class ActorNetwork(object):
         net = tflearn.fully_connected(inputs, 400)
         net = tflearn.layers.normalization.batch_normalization(net)
         net = tflearn.activations.relu(net)
-        net = tflearn.fully_connected(net, 300)
-        net = tflearn.layers.normalization.batch_normalization(net)
-        net = tflearn.activations.relu(net)
-        """ 
         net = tflearn.fully_connected(net, 30)
         net = tflearn.layers.normalization.batch_normalization(net)
         net = tflearn.activations.relu(net)
         net = tflearn.fully_connected(net, 30)
         net = tflearn.layers.normalization.batch_normalization(net)
         net = tflearn.activations.relu(net)
-        """
+        net = tflearn.fully_connected(net, 30)
+        net = tflearn.layers.normalization.batch_normalization(net)
+        net = tflearn.activations.relu(net)
         # Final layer weights are init to Uniform[-3e-3, 3e-3]
         w_init = tflearn.initializations.uniform(minval=-0.003, maxval=0.003)
         out = tflearn.fully_connected(
@@ -182,7 +191,7 @@ class CriticNetwork(object):
         t2 = tflearn.fully_connected(action, 300)
 
         net = tflearn.activation(tf.matmul(net, t1.W) + tf.matmul(action, t2.W) + t2.b, activation='relu')
-        """
+
         net = tflearn.fully_connected(net, 90)
         net = tflearn.layers.normalization.batch_normalization(net)
         net = tflearn.activations.relu(net)
@@ -194,7 +203,7 @@ class CriticNetwork(object):
         net = tflearn.fully_connected(net, 20)
         net = tflearn.layers.normalization.batch_normalization(net)
         net = tflearn.activations.relu(net)
-        """
+
         # linear layer connected to 1 output representing Q(s,a)
         # Weights are init to Uniform[-3e-3, 3e-3]
         w_init = tflearn.initializations.uniform(minval=-0.003, maxval=0.003)
@@ -303,8 +312,8 @@ def train(sess, env, args, actor, critic, actor_noise):
     rand_ep_for_exp = int(args['max_episodes']) * 0.001
 
     # egy masfele random baszakodas
-    rand_ep_for_exp2 = range(int(0.1 * int(args['max_episodes'])), int(0.11 * int(args['max_episodes'])))
-    rand_ep_for_exp3 = range(int(0.13 * int(args['max_episodes'])), int(0.14 * int(args['max_episodes'])))
+    rand_ep_for_exp2 = range(int(0.2 * int(args['max_episodes'])), int(0.21 * int(args['max_episodes'])))
+    rand_ep_for_exp3 = range(int(0.3 * int(args['max_episodes'])), int(0.31 * int(args['max_episodes'])))
 
     # a minimum random amivel a teljes tanulas alatt neha random lep, megha mar a vegen is vagyunk:
     rand_stp_min = 0.001
@@ -333,7 +342,8 @@ def train(sess, env, args, actor, critic, actor_noise):
         if i == draws:
             draw = True
             draws = draws + int(args['max_episodes']) / draws_per_fullepisodes
-            plt.clf()
+            if use_matplotlib:
+                plt.clf()
             env.draw_track()
         # ---------------------------------------------------------------------------
 
@@ -391,7 +401,7 @@ def train(sess, env, args, actor, critic, actor_noise):
             #megnézzük mit mond a környezet az adott álapotban az adott action-ra:
             #s2, r, terminal, info = env.step(a)
             v_new, pos_new, reward, end, section_nr = env.step(gg_action, v, pos, draw, color)
-            t_diff = env.get_time_diff(pos, pos_new, reward, end)
+            t_diff = env.get_time_diff(pos, pos_new, reward)
             #megintcsak a kétfelől összemásolgatott küdok miatt, feleltessünkk meg egymásnak változókat:
             s2 = [v_new[0], v_new[1], pos_new[0], pos_new[1]]
             r = t_diff
@@ -403,7 +413,7 @@ def train(sess, env, args, actor, critic, actor_noise):
 
             # Keep adding experience to the memory until there are at least minibatch size samples, És amig a
             # tanulas elejen a random lepkedos fazisban vagyunk.
-            if replay_buffer.size() > int(args['minibatch_size']): # and not rand_episode:
+            if replay_buffer.size() > int(args['minibatch_size']) and not rand_episode:
                 s_batch, a_batch, r_batch, t_batch, s2_batch = replay_buffer.sample_batch(int(args['minibatch_size']))
 
                 # Calculate targets
@@ -431,8 +441,8 @@ def train(sess, env, args, actor, critic, actor_noise):
                 critic.update_target_network()
 
             if draw:
-                plt.pause(0.001)
-                plt.draw()
+                if use_matplotlib:
+                    plt.draw()
 
             #a kovetkezo lepeshez uj s legyen egyenlo az aktualis es folytatjuk
             #s = s2
@@ -451,10 +461,8 @@ def train(sess, env, args, actor, critic, actor_noise):
                 writer.add_summary(summary_str, i)
                 writer.flush()
 
-                if draw:
-                    print('\033[91m| Reward: {:.3f} | Episode: {:d} | Qmax: {:.4f}'.format(ep_reward, i, (ep_ave_max_q / float(j))))
-                else:
-                    print('| Reward: {:.3f} | Episode: {:d} | Qmax: {:.4f}'.format(ep_reward, i, (ep_ave_max_q / float(j))))
+                print(chr(27) + "[2J")
+                print('| Reward: {:.3f} | Episode: {:d} | Qmax: {:.4f}'.format(ep_reward, i, (ep_ave_max_q / float(j))))
 
                 break
 
@@ -507,23 +515,28 @@ def main(args):
 
         train(sess, env, args, actor, critic, actor_noise)
 
+        save(actor, critic)
 
+def save(actor, critic):
+    print("save - not working")
+    #actor.save("actor.tfl")
+    #critic.save("actor.tfl")
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='provide arguments for DDPG agent')
 
     # agent parameters
-    parser.add_argument('--actor-lr', help='actor network learning rate',   default=0.00001)
+    parser.add_argument('--actor-lr', help='actor network learning rate',   default=0.00002)
     parser.add_argument('--critic-lr', help='critic network learning rate', default=0.001)
     parser.add_argument('--gamma', help='discount factor for critic updates', default=0.998)
     parser.add_argument('--tau', help='soft target update parameter', default=0.001)
-    parser.add_argument('--buffer-size', help='max size of the replay buffer', default=50000)
+    parser.add_argument('--buffer-size', help='max size of the replay buffer', default=1000)
     parser.add_argument('--minibatch-size', help='size of minibatch for minibatch-SGD', default=32)
 
     # run parameters
     parser.add_argument('--env', help='choose the gym env- tested on {Pendulum-v0}', default='Acrobot-v1')
     parser.add_argument('--random-seed', help='random seed for repeatability', default=12131)
-    parser.add_argument('--max-episodes', help='max num of episodes to do while training', default=30000)
+    parser.add_argument('--max-episodes', help='max num of episodes to do while training', default=10000)
     parser.add_argument('--max-episode-len', help='max length of 1 episode', default=40)
     parser.add_argument('--render-env', help='render the gym env', action='store_true')
     parser.add_argument('--use-gym-monitor', help='record gym results', action='store_true')
