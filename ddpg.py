@@ -498,7 +498,7 @@ def main(args):
         #                    #[190, 125, 190, 64]])
 
         sections = np.array([[273, 125, 273, 64],  # [333, 125, 333, 64],[394, 157, 440, 102],
-                             [370, 195, 440, 270]])
+                             [220, 300, 280, 300]])
 
         #env = PaperRaceEnv('PALYA3.bmp', trk_col, 'GG1.bmp', start_line, random_init=False)
         env = PaperRaceEnv('PALYA4.bmp', trk_col, 'GG1.bmp', sections, random_init=False)

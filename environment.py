@@ -91,7 +91,7 @@ class PaperRaceEnv:
 
         # van egy referencia lepessor ami valahogy beér a célba (palya4) :
         #self.ref_actions = np.array([0, -180, -95, -95, -90, -95])
-        self.ref_actions = np.array([0, -180, -96, -97, -100, -100, -100])
+        self.ref_actions = np.array([0, -180, -96, -97, -110, -105, -105, -105, -110, 110, 110, 100, 80, 30])
         # van egy referencia lepessor ami valahogy beér a célba (palya5) :
         # self.ref_actions = np.array([0, 150, 180, -160, -160, -160, -150, -90, -90, -110, -110, -120, -110, -110, 0,
         #                             90, -90, 90, -140, 90, 110, 90, 120, 120, 120, 120, 100, -20, -10, 0, 0, 0])
