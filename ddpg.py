@@ -10,9 +10,9 @@ Author: Patrick Emami
 import tensorflow as tf
 import numpy as np
 
-"Ez a HPC-s verziÃ³"
+"!!!Ez a HPC-s verziÃ³"
 
-OnHPC = True
+OnHPC = False
 
 if OnHPC:
     use_matplotlib = False

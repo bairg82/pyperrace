@@ -1,6 +1,6 @@
 "Ez a HPC-s verziÃ³"
 
-OnHPC = True
+OnHPC = False
 
 if OnHPC:
     use_matplotlib = False
