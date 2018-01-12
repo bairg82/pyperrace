@@ -319,8 +319,8 @@ def train(sess, env, args, actor, critic, actor_noise):
     rand_ep_for_exp = int(args['max_episodes']) * 0.001
 
     # egy masfele random baszakodas
-    rand_ep_for_exp2 = range(int(0.1 * int(args['max_episodes'])), int(0.11 * int(args['max_episodes'])))
-    rand_ep_for_exp3 = range(int(0.13 * int(args['max_episodes'])), int(0.14 * int(args['max_episodes'])))
+    rand_ep_for_exp2 = range(int(0.06 * int(args['max_episodes'])), int(0.07 * int(args['max_episodes'])))
+    rand_ep_for_exp3 = range(int(0.08 * int(args['max_episodes'])), int(0.09 * int(args['max_episodes'])))
 
     # a minimum random amivel a teljes tanulas alatt neha random lep, megha mar a vegen is vagyunk:
     rand_stp_min = 0.001
@@ -361,11 +361,11 @@ def train(sess, env, args, actor, critic, actor_noise):
         print("Random Episode")
         # !: később intézve hogy ilyenkor ne tanuljon, csak töltse a memoryt
 
-        rand_episode2 = i in rand_ep_for_exp2 or (i in rand_ep_for_exp3)
+        rand_episode2 = (i in rand_ep_for_exp2) or (i in rand_ep_for_exp3)
         print("Random Episode2:", rand_episode2)
 
         # aztan kesobb, az epizodok elorehaladtaval, csokkeno valoszinuseggel, random lepesek
-        rand_stp_for_exp = (int(args['max_episodes']) - (20 * i)) / int(args['max_episodes'])
+        rand_stp_for_exp = (int(args['max_episodes']) - (10 * i)) / int(args['max_episodes'])
         print("Random Step", rand_stp_for_exp)
 
         #egy egy epizódon belül ennyi lépés van maximum:
@@ -380,11 +380,14 @@ def train(sess, env, args, actor, critic, actor_noise):
             if rnd.uniform(0, 1) < rand_stp_for_exp or rnd.uniform(0, 1) < rand_stp_min:
                 rand_step = True
 
+            #ennyiedik leestol kezdve random lesz a lepes:
+            lepestol = rnd.uniform(0, env.ref_actions.size)
+
             #Actionok:
             # Ha az adott felteltel teljesult korabban, es most egy random epizodban vagyunk, vagy nem random az epizod,
             # de a lepes random, na akkor randomot lepunk:
             if rand_episode or rand_step:
-                if rnd.uniform(0, env.ref_actions.size) < j < env.ref_actions.size:
+                if (lepestol < j) and (j < env.ref_actions.size):
                     a = int(np.random.normal(env.ref_actions[j], 10, size=1))
                 else:
                     a = int(actor.predict(np.reshape(s, (1, actor.s_dim))))
@@ -392,7 +395,7 @@ def train(sess, env, args, actor, critic, actor_noise):
             # A tanulasra szant epizodok soran nem sak az elejen hanem kesobb is legyen egy kis "belezavaras"
             elif rand_episode2: # or rand_step2:
                 if j < env.ref_actions.size:
-                    a = int(np.random.normal(env.ref_actions[j], 10, size=1))
+                    a = int(np.random.normal(env.ref_actions[j], 15, size=1))
                 else:
                     a = int(actor.predict(np.reshape(s, (1, actor.s_dim))))
                 print("\033[94m {}\033[00m".format("        -------Random2 action:"), a)
@@ -498,7 +501,7 @@ def main(args):
         #                    #[190, 125, 190, 64]])
 
         sections = np.array([[273, 125, 273, 64],  # [333, 125, 333, 64],[394, 157, 440, 102],
-                             [220, 300, 280, 300]])
+                             [240, 400, 330, 380]])
 
         #env = PaperRaceEnv('PALYA3.bmp', trk_col, 'GG1.bmp', start_line, random_init=False)
         env = PaperRaceEnv('PALYA4.bmp', trk_col, 'GG1.bmp', sections, random_init=False)
