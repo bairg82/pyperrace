@@ -604,7 +604,7 @@ class PaperRaceEnv:
             curr_dist_in, curr_pos_in, curr_dist_out, curr_pos_out = self.get_ref(pos_new)
 
             xvals = np.array([pre_dist_in, curr_dist_in])
-            print("elozo es aktualis tav:", xvals)
+            # print("elozo es aktualis tav:", xvals)
 
             # ezekre a tavolsagokra a referencia lepessor ennyi ido alaptt jutott el
             yinterp = np.interp(xvals, x, y, 0)

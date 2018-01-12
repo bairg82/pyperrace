@@ -78,17 +78,15 @@ for ep in range(episodes):
 
     while not end:
         step = step + 1
-        if step == 1:
-            action = 0
-        else:
-            if random:
-                #action = int(np.random.randint(-180, 180, size=1))
-                if step < env.ref_actions.size:
-                    action = int(np.random.normal(env.ref_actions[step], 30, size=1))
-                else:
-                    action = int(np.random.randint(-180, 180, size=1))
+
+        if random:
+            #action = int(np.random.randint(-180, 180, size=1))
+            if step < env.ref_actions.size:
+                action = int(np.random.normal(env.ref_actions[step], 30, size=1))
             else:
-                action = int(input('Give inut (-180..180 number)'))
+                action = int(np.random.randint(-180, 180, size=1))
+        else:
+            action = int(input('Give inut (-180..180 number)'))
 
         print("action: ", action, "-------------")
         gg_action = env.gg_action(action)  # action-höz tartozó vektor lekérése
