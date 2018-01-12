@@ -21,7 +21,7 @@ from skimage.color import rgb2gray
 class PaperRaceEnv:
     """ez az osztály biztosítja a tanuláshoz a környezetet"""
 
-    def __init__(self, trk_pic, trk_col, gg_pic, sections, random_init, track_inside_color=None,):
+    def __init__(self, trk_pic_file, trk_col, gg_pic, sections, random_init, track_inside_color=None,):
 
         # ha nincs megadva a pálya belsejének szín, akkor pirosra állítja
         # ez a rewardokat kiszámoló algoritmus működéséhez szükséges
@@ -33,7 +33,7 @@ class PaperRaceEnv:
         # a palya kulso szine is jobb lenne nem itt, de most ganyolva ide rakjuk
         self.track_outside_color = np.array([255, 255, 255], dtype='uint8')
 
-        self.trk_pic = mpimg.imread(trk_pic)  # beolvassa a pályát
+        self.trk_pic = mpimg.imread(trk_pic_file)  # beolvassa a pályát
         self.trk = rgb2gray(self.trk_pic)  # szürkeárnyalatosban dolgozunk
         self.trk_col = trk_col  # trk_pic-en a pálya színe
         self.gg_pic = mpimg.imread(gg_pic) # beolvassa a GG diagramot
@@ -108,7 +108,6 @@ class PaperRaceEnv:
 
         # Szakaszok kirajzolása
         for i in range(len(self.sections)):
-
             if use_matplotlib:
                 X = np.array([self.sections[i][0], self.sections[i][2]])
                 Y = np.array([self.sections[i][1], self.sections[i][3]])
@@ -686,8 +685,8 @@ class PaperRaceEnv:
             ref_steps[i] = -epreward
 
             if True:
-
                 if use_matplotlib:
+                    plt.pause(0.001)
                     plt.draw()
 
             v = v_new
@@ -762,6 +761,7 @@ class PaperRaceEnv:
                 break
         if rajz:
             if use_matplotlib:
+                plt.pause(0.001)
                 plt.draw()
 
         return dist_dict_in
@@ -836,5 +836,6 @@ class PaperRaceEnv:
         if rajz:
             if use_matplotlib:
                 plt.draw()
+                plt.pause(0.001)
 
         return dist_dict_out
