@@ -1,4 +1,4 @@
-proba commit"""
+"""
 Implementation of DDPG - Deep Deterministic Policy Gradient
 Algorithm and hyperparameter details can be found here:
     http://arxiv.org/pdf/1509.02971v2.pdf
@@ -444,6 +444,7 @@ def train(sess, env, args, actor, critic, actor_noise):
 
             if draw:
                 if use_matplotlib:
+                    plt.pause(0.001)
                     plt.draw()
 
             #a kovetkezo lepeshez uj s legyen egyenlo az aktualis es folytatjuk
