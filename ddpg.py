@@ -510,8 +510,8 @@ def main(args):
         #                     [240, 400, 300, 380]])
         #                    #[190, 125, 190, 64]])
 
-        sections = np.array([[273, 125, 273, 64],  # [333, 125, 333, 64],[394, 157, 440, 102],
-                             [240, 400, 330, 380]])
+        sections = np.array([[273, 125, 273, 64],  # [333, 125, 333, 64],[394, 157, 440, 102],[240, 400, 330, 380]
+                             [100, 250, 180, 250]])
 
         #env = PaperRaceEnv('PALYA3.bmp', trk_col, 'GG1.bmp', start_line, random_init=False)
         env = PaperRaceEnv('PALYA4.bmp', trk_col, 'GG1.bmp', sections, random_init=False)
@@ -553,7 +553,7 @@ if __name__ == '__main__':
     parser.add_argument('--critic-lr', help='critic network learning rate', default=0.001)
     parser.add_argument('--gamma', help='discount factor for critic updates', default=0.998)
     parser.add_argument('--tau', help='soft target update parameter', default=0.001)
-    parser.add_argument('--buffer-size', help='max size of the replay buffer', default=150000)
+    parser.add_argument('--buffer-size', help='max size of the replay buffer', default=1500000)
     parser.add_argument('--minibatch-size', help='size of minibatch for minibatch-SGD', default=48)
 
     # run parameters
