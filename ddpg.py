@@ -319,8 +319,8 @@ def train(sess, env, args, actor, critic, actor_noise):
     rand_ep_for_exp = int(args['max_episodes']) * 0.02
 
     # egy masfele random baszakodas
-    rand_ep_for_exp2 = range(int(0.05 * int(args['max_episodes'])), int(0.055 * int(args['max_episodes'])))
-    rand_ep_for_exp3 = range(int(0.07 * int(args['max_episodes'])), int(0.075 * int(args['max_episodes'])))
+    rand_ep_for_exp2 = range(int(0.1 * int(args['max_episodes'])), int(0.11 * int(args['max_episodes'])))
+    rand_ep_for_exp3 = range(int(0.12 * int(args['max_episodes'])), int(0.13 * int(args['max_episodes'])))
 
     # a minimum random amivel a teljes tanulas alatt neha random lep, megha mar a vegen is vagyunk:
     rand_stp_min = 0.001
@@ -369,7 +369,7 @@ def train(sess, env, args, actor, critic, actor_noise):
         print("Random Step", rand_stp_for_exp)
 
         #ennyiedik leestol kezdve random lesz a lepes:
-        lepestol = rnd.uniform(0, env.ref_actions.size * (1 - (200*i) / int(args['max_episodes'])))
+        lepestol = rnd.uniform(0, env.ref_actions.size * (100*i) / int(args['max_episodes']))
 
         #egy egy epizódon belül ennyi lépés van maximum:
         for j in range(int(args['max_episode_len'])):
@@ -389,7 +389,8 @@ def train(sess, env, args, actor, critic, actor_noise):
             # de a lepes random, na akkor randomot lepunk:
             if i < rand_ep_for_exp:
                 if (lepestol < j) and (j < env.ref_actions.size):
-                    a = int(np.random.normal(env.ref_actions[j], 15, size=1))
+                    a = int(np.random.normal(env.ref_actions[j], 20, size=1))
+
                     print("\033[94m {}\033[00m".format("        -------ref norm rand action:"), a)
                 else:
                     if j < env.ref_actions.size:
@@ -413,9 +414,10 @@ def train(sess, env, args, actor, critic, actor_noise):
             else:
                 a = int(actor.predict(np.reshape(s, (1, actor.s_dim))) + 0 * actor_noise()) + int(
                     np.random.randint(-3, 3, size=1))
+
                 print("Netwrk action:--------", a)
 
-
+            a = max(min(a, 180), -180)
             gg_action = env.gg_action(a)  # action-höz tartozó vektor lekérése
             #általában ez a fenti két sor egymsor. csak nálunk most így van megírva a környezet, hogy így kell neki beadni az actiont
             #megnézzük mit mond a környezet az adott álapotban az adott action-ra:
@@ -554,12 +556,12 @@ if __name__ == '__main__':
     parser.add_argument('--gamma', help='discount factor for critic updates', default=0.998)
     parser.add_argument('--tau', help='soft target update parameter', default=0.001)
     parser.add_argument('--buffer-size', help='max size of the replay buffer', default=1500000)
-    parser.add_argument('--minibatch-size', help='size of minibatch for minibatch-SGD', default=48)
+    parser.add_argument('--minibatch-size', help='size of minibatch for minibatch-SGD', default=128)
 
     # run parameters
     parser.add_argument('--env', help='choose the gym env- tested on {Pendulum-v0}', default='pyperrace')
     parser.add_argument('--random-seed', help='random seed for repeatability', default=12131)
-    parser.add_argument('--max-episodes', help='max num of episodes to do while training', default=90000)
+    parser.add_argument('--max-episodes', help='max num of episodes to do while training', default=10000)
     parser.add_argument('--max-episode-len', help='max length of 1 episode', default=40)
     parser.add_argument('--render-env', help='render the gym env', action='store_true')
     parser.add_argument('--use-gym-monitor', help='record gym results', action='store_true')
@@ -574,3 +576,7 @@ if __name__ == '__main__':
     pp.pprint(args)
 
     main(args)
+
+    #TODO: elejen az elsp lepesek tok random legyenek kicsit, es utana csak a ref lepessorhoz
+    #TODO: csinalni valami alap ref lepessor csinalo algoritmust (pretrain, esetleg?)
+    #TODO: reward vissza az egyszeru felere. -1 minden lepes, csak kieseskor lehet a hatralevo tav
