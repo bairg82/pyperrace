@@ -89,6 +89,8 @@ class ActorNetwork(object):
             self.num_trainable_vars = len(
                 self.network_params) + len(self.target_network_params)
 
+            self.saver = tf.train.Saver()
+
     def create_actor_network(self):
         inputs = tflearn.input_data(shape=[None, self.s_dim])
         net = tflearn.fully_connected(inputs, 400)
@@ -137,6 +139,8 @@ class ActorNetwork(object):
     def get_num_trainable_vars(self):
         return self.num_trainable_vars
 
+    def save(self, path):
+        self.saver.save(self.sess, path)
 
 class CriticNetwork(object):
     """
@@ -184,6 +188,7 @@ class CriticNetwork(object):
             # w.r.t. that action. Each output is independent of all
             # actions except for one.
             self.action_grads = tf.gradients(self.out, self.action)
+            self.saver = tf.train.Saver()
 
     def create_critic_network(self):
         inputs = tflearn.input_data(shape=[None, self.s_dim])
@@ -244,6 +249,9 @@ class CriticNetwork(object):
 
     def update_target_network(self):
         self.sess.run(self.update_target_network_params)
+
+    def save(self, path):
+        self.saver.save(self.sess, path)
 
 
 # Taken from https://github.com/openai/baselines/blob/master/baselines/ddpg/noise.py, which is
@@ -542,8 +550,8 @@ def main(args):
 
 def save(actor, critic):
     print("save - not working")
-    #actor.save("actor.tfl")
-    #critic.save("actor.tfl")
+    actor.save("actor.tfl")
+    critic.save("actor.tfl")
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='provide arguments for DDPG agent')
