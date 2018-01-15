@@ -1,0 +1,110 @@
+#jobname
+#PBS -N pyperrace
+
+#max runtime
+#PBS -l walltime=01:01:00:00
+
+#resources: node->server(max 5), ppn->cpu core per server (max 24), gpus-> (max 2)
+##PBS -l nodes=1:ppn=24:gpus=1:default
+
+#creating error files, and output files
+#PBS -e ../$PBS_JOBID/error.txt
+#PBS -o ../$PBS_JOBID/output.txt
+
+#further examples for resourse
+#1 node 1 core (max 120)
+#PBS -l nodes=1:ppn=1
+
+#1 node 24 core 2 gpu this is the maximum for servers
+##PBS -l nodes=1:ppn=24:gpus=2:default
+
+#sript run
+#PBS -S /bin/bash
+
+#Creating variables
+#jobs dir
+JOBSDIR="/storage/sas2-hpc/lacibeb/Jobs/"
+#assetdir
+ASSETDIR="/storage/sas2-hpc/lacibeb/Jobs/DateSetRepository/"
+
+#step into working directory, where the qsub is ran
+cd $PBS_O_WORKDIR
+
+#create working directory
+mkdir ../$PBS_JOBID
+chmod 777 ../$PBS_JOBID
+
+#copy all files to have backup
+cp -ar . ../$PBS_JOBID/
+
+
+#goto work directory
+cd ../$PBS_JOBID
+
+
+##########################################
+#                                        #
+#   Outputs some useful job information.  #
+#                                        #
+##########################################
+
+NCPU=`wc -l < $PBS_NODEFILE`
+NNODES=`uniq $PBS_NODEFILE | wc -l`
+
+cat > $PBS_NODEFILE_$PBS_JOBID.txt << EOL
+------------------------------------------------------
+PBS: qsub is running on $PBS_O_HOST
+PBS: originating queue is $PBS_O_QUEUE
+PBS: executing queue is $PBS_QUEUE
+PBS: working directory is $PBS_O_WORKDIR
+PBS: execution mode is $PBS_ENVIRONMENT
+PBS: job identifier is $PBS_JOBID
+PBS: job name is $PBS_JOBNAME
+PBS: node file is $PBS_NODEFILE
+PBS: number of nodes is $NNODES
+PBS: current home directory is $PBS_O_HOME
+PBS: PATH = $PBS_O_PATH
+------------------------------------------------------
+' This job is allocated on '${NCPU}' cpu(s)'
+'Job is running on node(s): '
+EOL
+
+cat $PBS_NODEFILE >> $PBS_JOBNAME_$PBS_JOBID.txt
+
+cat "GPUS:" >> $PBS_JOBNAME_$PBS_JOBID.txt
+
+cat $PBS_GPUFILE >> $PBS_JOBNAME_$PBS_JOBID.txt
+
+cat /usr/local/cuda/version.txt >> $PBS_JOBNAME_$PBS_JOBID.txt
+
+##############################################################
+#                                                            #
+#   The prologue script automatically makes a directory      #
+#   on the local disks for you.  The name of this directory  #
+#   depends on the job id, but you need only refer to it     #
+#   using ${WORKDIR}.                                        #
+#                                                            #
+##############################################################
+
+#installing required python packages to user -- this is not needed
+#pip3 install --user keras pandas sklearn scikit-image python-socketio eventlet flask h5py OpenCV
+
+#load modeules -- not necessary
+#module load Langs/TensorFlow
+
+#user code, if you want to do some other stuff, put it here
+#cd endtoend2
+
+
+
+#activateing environment
+source activate Ehak_gpu
+
+#running python code, saving terminal output to file for further analisys
+
+#profiler
+#python -m cProfile -o program.prof my_program.py
+
+python -m cProfile -o program.prof ddpg.py > python_out_$PBS_JOBID.txt
+
+
