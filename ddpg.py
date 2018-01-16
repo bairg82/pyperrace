@@ -512,11 +512,16 @@ def main(args):
         #                     [240, 400, 300, 380]])
         #                    #[190, 125, 190, 64]])
 
-        sections = np.array([[273, 125, 273, 64],  # [333, 125, 333, 64],[394, 157, 440, 102],[240, 400, 330, 380]
-                             [100, 250, 180, 250]])
+        #palya4 teljes
+        #sections = np.array([[273, 125, 273, 64],  # [333, 125, 333, 64],[394, 157, 440, 102],[240, 400, 330, 380]
+        #                     [100, 250, 180, 250]])
+
+        # palya5.bmp-hez:
+        sections = np.array([[670, 310, 670, 130],  # [333, 125, 333, 64],[394, 157, 440, 102],
+                             [1250, 680, 1250, 550]])
 
         #env = PaperRaceEnv('PALYA3.bmp', trk_col, 'GG1.bmp', start_line, random_init=False)
-        env = PaperRaceEnv('PALYA4.bmp', trk_col, 'GG1.bmp', sections, random_init=False)
+        env = PaperRaceEnv('PALYA5.bmp', trk_col, 'GG1.bmp', sections, random_init=False)
 
         np.random.seed(int(args['random_seed']))
         tf.set_random_seed(int(args['random_seed']))
