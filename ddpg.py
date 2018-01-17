@@ -57,11 +57,11 @@ class ActorNetwork(object):
             self.learning_rate = learning_rate
             self.tau = tau
 
-            self.graph = tf.Graph()
+            self.sess = sess
+            self.graph = sess.graph
+            # self.graph = tf.Graph()
             # Create the critic network
             with self.graph.as_default():
-
-                self.sess = tf.Session(graph = self.graph)
 
                 # Actor Network
                 self.inputs, self.out, self.scaled_out = self.create_actor_network()
@@ -96,18 +96,22 @@ class ActorNetwork(object):
                     self.network_params) + len(self.target_network_params)
 
                 #initialise variables
-                init = tf.global_variables_initializer()
-                self.sess.run(init)
+                #init = tf.global_variables_initializer()
+                #self.sess.run(init)
+
+                #writer = tf.summary.FileWriter(args['summary_dir'], self.sess.graph)
+                #writer.close()
+
                 self.saver = tf.train.Saver()
 
     def create_actor_network(self):
         inputs = tflearn.input_data(shape=[None, self.s_dim], name='actor_input')
-        net = tflearn.fully_connected(inputs, 400, name='actor_fc1')
-        net = tflearn.layers.normalization.batch_normalization(net, name='actor_norm1')
-        net = tflearn.activations.relu(net)
-        net = tflearn.fully_connected(net, 300, name='actor_fc2')
-        net = tflearn.layers.normalization.batch_normalization(net, name='actor_norm2')
-        net = tflearn.activations.relu(net)
+        net1 = tflearn.fully_connected(inputs, 400, name='actor_fc1')
+        net2 = tflearn.layers.normalization.batch_normalization(net1, name='actor_norm1')
+        net3 = tflearn.activations.relu(net2)
+        net4 = tflearn.fully_connected(net3, 300, name='actor_fc2')
+        net5 = tflearn.layers.normalization.batch_normalization(net4, name='actor_norm2')
+        net6 = tflearn.activations.relu(net5)
         """ 
         net = tflearn.fully_connected(net, 30)
         net = tflearn.layers.normalization.batch_normalization(net)
@@ -119,7 +123,7 @@ class ActorNetwork(object):
         # Final layer weights are init to Uniform[-3e-3, 3e-3]
         w_init = tflearn.initializations.uniform(minval=-0.003, maxval=0.003)
         out = tflearn.fully_connected(
-            net, self.a_dim, activation='tanh', weights_init=w_init, name='actor_output')
+            net6, self.a_dim, activation='tanh', weights_init=w_init, name='actor_output')
         # Scale output to -action_bound to action_bound
 
         scaled_out = tf.multiply(out, self.action_bound)
@@ -165,11 +169,13 @@ class CriticNetwork(object):
             self.tau = tau
             self.gamma = gamma
 
-            self.graph = tf.Graph()
+            self.sess = sess
+            self.graph = sess.graph
+            # self.graph = tf.Graph()
             # Create the critic network
             with self.graph.as_default():
 
-                self.sess = tf.Session(graph = self.graph)
+                #self.sess = tf.Session(graph = self.graph)
 
                 self.inputs, self.action, self.out = self.create_critic_network()
 
@@ -203,22 +209,25 @@ class CriticNetwork(object):
                 self.action_grads = tf.gradients(self.out, self.action)
 
                 #initialise variables
-                init = tf.global_variables_initializer()
-                self.sess.run(init)
+                #init = tf.global_variables_initializer()
+                #self.sess.run(init)
+
+                #writer = tf.summary.FileWriter(args['summary_dir'], self.sess.graph)
+                #writer.close()
 
                 self.saver = tf.train.Saver()
 
     def create_critic_network(self):
-        inputs = tflearn.input_data(shape=[None, self.s_dim], name='critc_input')
-        action = tflearn.input_data(shape=[None, self.a_dim], name='critc_critc')
-        net = tflearn.fully_connected(inputs, 400, name='critc_fc1')
-        net = tflearn.layers.normalization.batch_normalization(net, name='critc_norm1')
+        inputs = tflearn.input_data(shape=[None, self.s_dim], name='critic_input')
+        net = tflearn.fully_connected(inputs, 400, name='critic_fc1')
+        net = tflearn.layers.normalization.batch_normalization(net, name='critic_norm1')
         net = tflearn.activations.relu(net)
+        t1 = tflearn.fully_connected(net, 300, name='critic_fc2')
 
         # Add the action tensor in the 2nd hidden layer
         # Use two temp layers to get the corresponding weights and biases
-        t1 = tflearn.fully_connected(net, 300, name='critc_fc2')
-        t2 = tflearn.fully_connected(action, 300, name='critc_norm2')
+        action = tflearn.input_data(shape=[None, self.a_dim], name='action_input')
+        t2 = tflearn.fully_connected(action, 300, name='critic_norm2')
 
         net = tflearn.activation(tf.matmul(net, t1.W) + tf.matmul(action, t2.W) + t2.b, activation='relu')
         """
@@ -323,7 +332,9 @@ def train(sess, env, args, actor, critic, actor_noise):
     print("summaries built")
 
     sess.run(tf.global_variables_initializer())
-    writer = tf.summary.FileWriter(args['summary_dir'], sess.graph)
+    # writer = tf.summary.FileWriter((args['summary_dir']))
+    writer = tf.summary.FileWriter(logdir = args['summary_dir'], graph = sess.graph)
+    # writer.close()
 
     # Initialize target network weights
     actor.update_target_network()
