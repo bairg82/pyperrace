@@ -1,0 +1,60 @@
+#!/bin/bash
+
+ITERATIONS=5
+
+name="pyperrace_teszt3"
+
+parentdir=$PWD
+
+#jobs dir
+JOBSDIR="/storage/sas2-hpc/lacibeb/Jobs/"
+#assetdir
+ASSETDIR="/storage/sas2-hpc/lacibeb/Jobs/DateSetRepository/"
+echo "Scripted $ITERATIONS times"
+
+
+#create working directory
+mkdir $JOBSDIR$name/
+chmod 777 $JOBSDIR$name/
+
+for i in $(seq 1 $ITERATIONS)
+
+do
+  echo "$i element"
+  #value for individual jobs
+  cd $parentdir
+  VALUE=$((ITERATIONS*i))
+  JOBDIR=$name"_"$i
+  #create job working directory
+  mkdir $JOBSDIR$name/$JOBDIR
+  chmod 777 $JOBSDIR$name/$JOBDIR
+
+  #copy all files to have backup
+  cp -ar . $JOBSDIR$name/$JOBDIR/
+
+  #goto work directory
+  cd $JOBSDIR$name/$JOBDIR
+
+  sed -i "s/\${i}/$i/"  multiplejobs.pbs
+
+  sed -i "s/\${VALUE}/1000/"  multiplejobs.pbs
+
+  qsub multiplejobs.pbs
+done
+
+#    parser.add_argument('--actor-lr', help='actor network learning rate',   default=0.00001)
+#    parser.add_argument('--critic-lr', help='critic network learning rate', default=0.001)
+#    parser.add_argument('--gamma', help='discount factor for critic updates', default=0.998)
+#    parser.add_argument('--tau', help='soft target update parameter', default=0.001)
+#    parser.add_argument('--buffer-size', help='max size of the replay buffer', default=150000)
+#    parser.add_argument('--minibatch-size', help='size of minibatch for minibatch-SGD', default=48)
+
+#    # run parameters
+#    parser.add_argument('--env', help='choose the gym env- tested on {Pendulum-v0}', default='pyperrace')
+#    parser.add_argument('--random-seed', help='random seed for repeatability', default=12131)
+#    parser.add_argument('--max-episodes', help='max num of episodes to do while training', default=100)
+#    parser.add_argument('--max-episode-len', help='max length of 1 episode', default=40)
+#    parser.add_argument('--render-env', help='render the gym env', action='store_true')
+#    parser.add_argument('--use-gym-monitor', help='record gym results', action='store_true')
+#    parser.add_argument('--monitor-dir', help='directory for storing gym results', default='./results/gym_ddpg')
+#    parser.add_argument('--summary-dir', help='directory for storing tensorboard info', default='./results/tf_ddpg')

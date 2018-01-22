@@ -1,5 +1,5 @@
 #jobname
-#PBS -N pyperrace
+#PBS -N ${name}_1
 
 #max runtime
 #PBS -l walltime=01:01:00:00
@@ -8,12 +8,12 @@
 ##PBS -l nodes=1:ppn=24:gpus=1:default
 
 #creating error files, and output files
-#PBS -e ../$PBS_JOBID/error.txt
-#PBS -o ../$PBS_JOBID/output.txt
+#PBS -e error.txt
+#PBS -o output.txt
 
 #further examples for resourse
 #1 node 1 core (max 120)
-#PBS -l nodes=1:ppn=1
+#PBS -l nodes=1:ppn=24
 
 #1 node 24 core 2 gpu this is the maximum for servers
 ##PBS -l nodes=1:ppn=24:gpus=2:default
@@ -31,15 +31,15 @@ ASSETDIR="/storage/sas2-hpc/lacibeb/Jobs/DateSetRepository/"
 cd $PBS_O_WORKDIR
 
 #create working directory
-mkdir ../$PBS_JOBID
-chmod 777 ../$PBS_JOBID
+#mkdir ../$PBS_JOBID
+#chmod 777 ../$PBS_JOBID
 
 #copy all files to have backup
-cp -ar . ../$PBS_JOBID/
+#cp -ar . ../$PBS_JOBID/
 
 
 #goto work directory
-cd ../$PBS_JOBID
+#cd ../$PBS_JOBID
 
 
 ##########################################
@@ -105,14 +105,18 @@ source activate Ehak_gpu
 #profiler
 #python -m cProfile -o program.prof my_program.py
 
-if [ -v $PROFILE ]
-then
-    python -m cProfile -o program.prof ddpg.py > python_out_$PBS_JOBID.txt
-else
-    python ddpg.py > python_out_$PBS_JOBID.txt
+#if [ -v $PROFILE ]
+##then
+#    python -m cProfile -o program.prof ddpg.py > python_out_$PBS_JOBID.txt
+#else
+#    python ddpg.py > python_out_$PBS_JOBID.txt#
+#
+#if [ -v $SCRIPTED ]
+#then
+#    python ddpg.py > python_out_$PBS_JOBID.txt
+#else
+#    python ddpg.py --max-episodes=1000 > python_out_$PBS_JOBID.txt
 
-if [ -v $SCRIPTED ]
-then
-    python ddpg.py > python_out_$PBS_JOBID.txt
-else
-    python ddpg.py --max-episodes=$VALUE> python_out_$PBS_JOBID.txt
+python ddpg.py --max-episodes=1000 > python_out_$PBS_JOBID.txt
+
+echo 'Everything is done!'
