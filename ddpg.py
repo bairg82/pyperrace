@@ -343,7 +343,7 @@ def train(sess, env, args, actor, critic, actor_noise):
     print("critic initialised")
 
     # Initialize replay memory
-    replay_buffer = ReplayBuffer(int(args['buffer_size']), int(args['random_seed']))
+    replay_buffer = ReplayBuffer(int(args['buffer_size']), int(args['random_seed']), args['experience_dir'])
 
     # nem minden epizodot fogunk kirajzolni, mert lassú. Lásd később
     draws = 1
@@ -532,6 +532,11 @@ def train(sess, env, args, actor, critic, actor_noise):
 
                 break
 
+    replay_buffer.save()
+
+    #cleaning
+    replay_buffer.clear()
+
 def main(args):
     with tf.Session() as sess:
 
@@ -620,6 +625,8 @@ if __name__ == '__main__':
     parser.add_argument('--use-gym-monitor', help='record gym results', action='store_true')
     parser.add_argument('--monitor-dir', help='directory for storing gym results', default='./results/gym_ddpg')
     parser.add_argument('--summary-dir', help='directory for storing tensorboard info', default='./results/tf_ddpg')
+    parser.add_argument('--experience-dir', help='directory for storing tensorboard info', default='./experience/tf_ddpg')
+
 
     parser.set_defaults(render_env=True)
     parser.set_defaults(use_gym_monitor=True)
