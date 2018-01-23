@@ -13,7 +13,7 @@ import os
 
 "!!!Ez a HPC-s verziÃ³"
 
-OnHPC = False
+OnHPC = True
 
 # used_device = '/gpu:0'
 used_device = '/cpu:0'
@@ -564,6 +564,8 @@ def main(args):
         #env = PaperRaceEnv('PALYA3.bmp', trk_col, 'GG1.bmp', start_line, random_init=False)
         env = PaperRaceEnv('PALYA5.bmp', trk_col, 'GG1.bmp', sections, random_init=False)
 
+        #TODO: h1, h67 referencia lépéssor
+
         np.random.seed(int(args['random_seed']))
         tf.set_random_seed(int(args['random_seed']))
         #env.seed(int(args['random_seed']))
@@ -618,7 +620,7 @@ if __name__ == '__main__':
     # run parameters
     parser.add_argument('--env', help='choose the gym env- tested on {Pendulum-v0}', default='pyperrace')
     parser.add_argument('--random-seed', help='random seed for repeatability', default=12131)
-    parser.add_argument('--max-episodes', help='max num of episodes to do while training', default=100)
+    parser.add_argument('--max-episodes', help='max num of episodes to do while training', default=100000)
     parser.add_argument('--max-episode-len', help='max length of 1 episode', default=40)
     parser.add_argument('--render-env', help='render the gym env', action='store_true')
     parser.add_argument('--use-gym-monitor', help='record gym results', action='store_true')
