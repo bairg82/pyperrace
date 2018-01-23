@@ -280,6 +280,9 @@ class CriticNetwork(object):
     def save(self, path):
         self.saver.save(self.sess, path)
 
+    def load(self, path):
+        self.saver.load(self.sess, path)
+
 
 # Taken from https://github.com/openai/baselines/blob/master/baselines/ddpg/noise.py, which is
 # based on http://math.stackexchange.com/questions/1287634/implementing-ornstein-uhlenbeck-in-matlab
@@ -325,7 +328,7 @@ def build_summaries():
 #   Agent Training
 # ===========================
 
-def train(sess, env, args, actor, critic, actor_noise):
+def train(sess, env, args, actor, critic, actor_noise, replay_buffer):
     # Set up summary Ops
     summary_ops, summary_vars = build_summaries()
 
@@ -341,9 +344,6 @@ def train(sess, env, args, actor, critic, actor_noise):
     print("actor initialised")
     critic.update_target_network()
     print("critic initialised")
-
-    # Initialize replay memory
-    replay_buffer = ReplayBuffer(int(args['buffer_size']), int(args['random_seed']), args['experience_dir'])
 
     # nem minden epizodot fogunk kirajzolni, mert lassú. Lásd később
     draws = 1
@@ -532,11 +532,6 @@ def train(sess, env, args, actor, critic, actor_noise):
 
                 break
 
-    replay_buffer.save()
-
-    #cleaning
-    replay_buffer.clear()
-
 def main(args):
     with tf.Session() as sess:
 
@@ -595,15 +590,19 @@ def main(args):
 
         print("actor noise created")
 
-        train(sess, env, args, actor, critic, actor_noise)
+        # Initialize replay memory
+        replay_buffer = ReplayBuffer(int(args['buffer_size']), int(args['random_seed']), args['experience_dir'])
 
-        save(actor, critic)
+        train(sess, env, args, actor, critic, actor_noise, replay_buffer)
 
-def save(actor, critic):
-    print("save to:")
-    print(os.path.join(os.getcwd(), 'actor.tfl'))
-    actor.save(os.path.join(os.getcwd(), 'actor.tfl'))
-    critic.save(os.path.join(os.getcwd(), 'critic.tfl'))
+        actor.save(args['network_dir'] + '/actor.tfl')
+
+        critic.save(args['network_dir']+ '/critic.tfl')
+
+        replay_buffer.save()
+
+        #cleaning
+        replay_buffer.clear()
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='provide arguments for DDPG agent')
@@ -619,13 +618,15 @@ if __name__ == '__main__':
     # run parameters
     parser.add_argument('--env', help='choose the gym env- tested on {Pendulum-v0}', default='pyperrace')
     parser.add_argument('--random-seed', help='random seed for repeatability', default=12131)
-    parser.add_argument('--max-episodes', help='max num of episodes to do while training', default=10000)
+    parser.add_argument('--max-episodes', help='max num of episodes to do while training', default=100)
     parser.add_argument('--max-episode-len', help='max length of 1 episode', default=40)
     parser.add_argument('--render-env', help='render the gym env', action='store_true')
     parser.add_argument('--use-gym-monitor', help='record gym results', action='store_true')
     parser.add_argument('--monitor-dir', help='directory for storing gym results', default='./results/gym_ddpg')
     parser.add_argument('--summary-dir', help='directory for storing tensorboard info', default='./results/tf_ddpg')
-    parser.add_argument('--experience-dir', help='directory for storing tensorboard info', default='./experience/tf_ddpg')
+    parser.add_argument('--experience-dir', help='directory for experiences', default='./experience/tf_ddpg')
+    parser.add_argument('--load-experince', help='loading experience setting', default='./experience/tf_ddpg/experience.npz')
+    parser.add_argument('--network-dir', help='saving networks to this folder', default='./network/tf_ddpg')
 
 
     parser.set_defaults(render_env=True)

@@ -57,7 +57,7 @@ class ReplayBuffer(object):
         # open file
 
         # save all
-        if policy = 'all':
+        if policy == 'all':
             batch = random.sample(self.buffer, self.count)
 
         # save only best, number
@@ -72,26 +72,34 @@ class ReplayBuffer(object):
         s2_batch = np.array([_[4] for _ in batch])
 
         # save to file
-        np.savez((self.save_dir+'experience.npz'), s=s_batch, a=a_batch, r=r_batch, t=t_batch, s2=s2_batch,)
+        np.savez((self.save_dir+'/experience.npz'), s=s_batch, a=a_batch, r=r_batch, t=t_batch, s2=s2_batch,)
 
-    def load(self, file = './experience/experience.npz'):
+    def load(self, file='./experience/tf_ddpg/experience.npz'):
         # based on this:
         # https://docs.scipy.org/doc/numpy-1.13.0/reference/generated/numpy.savez.html#numpy.savez
 
         # loading experience from file
-        npzfile = np.load(file)
+        try:
+            npzfile = np.load(file)
+        except:
+            # do nothing
+            added = 0
 
-        s = npzfile['s']
-        a = npzfile['a']
-        r = npzfile['r']
-        t = npzfile['t']
-        s2 = npzfile['s2']
+        if npzfile != None:
+            s = npzfile['s']
+            a = npzfile['a']
+            r = npzfile['r']
+            t = npzfile['t']
+            s2 = npzfile['s2']
 
-        # this might be slow
-        # adding items by one
-        for i in s.shape(0):
-            self.add(s[i],a[i],r[i],t[i],s2[i])
+            # this might be slow
+            # adding items by one
+            added = s.shape(0)
+            for i in added:
+                self.add(s[i], a[i], r[i], t[i], s2[i])
+
+        return added
 
     def clear(self):
-        self.deque.clear()
+        self.buffer.clear()
         self.count = 0
