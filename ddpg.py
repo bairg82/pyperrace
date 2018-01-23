@@ -360,8 +360,8 @@ def train(sess, env, args, actor, critic, actor_noise, replay_buffer):
     rand_ep_for_exp = int(args['max_episodes']) * 0.02
 
     # egy masfele random baszakodas
-    rand_ep_for_exp2 = range(int(0.1 * int(args['max_episodes'])), int(0.11 * int(args['max_episodes'])))
-    rand_ep_for_exp3 = range(int(0.12 * int(args['max_episodes'])), int(0.13 * int(args['max_episodes'])))
+    rand_ep_for_exp2 = range(int(0.01 * int(args['max_episodes'])), int(0.011 * int(args['max_episodes'])))
+    rand_ep_for_exp3 = range(int(0.012 * int(args['max_episodes'])), int(0.013 * int(args['max_episodes'])))
 
     # a minimum random amivel a teljes tanulas alatt neha random lep, megha mar a vegen is vagyunk:
     rand_stp_min = 0.001
@@ -406,7 +406,7 @@ def train(sess, env, args, actor, critic, actor_noise, replay_buffer):
         #print("Random Episode2:", rand_episode2)
 
         # aztan kesobb, az epizodok elorehaladtaval, csokkeno valoszinuseggel, random lepesek
-        rand_stp_for_exp = (int(args['max_episodes']) - (40 * i)) / int(args['max_episodes'])
+        rand_stp_for_exp = (int(args['max_episodes']) - (100 * i)) / int(args['max_episodes'])
         print("Random Step", rand_stp_for_exp)
 
         #ennyiedik leestol kezdve random lesz a lepes:
