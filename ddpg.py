@@ -51,8 +51,8 @@ class ActorNetwork(object):
 
     def __init__(self, sess, state_dim, action_dim, action_bound, learning_rate, tau):
         with tf.device(used_device):
-            self.s_dim = state_dim
-            self.a_dim = action_dim
+            self.state_dim = state_dim
+            self.action_dim = action_dim
             self.action_bound = action_bound
             self.learning_rate = learning_rate
             self.tau = tau
@@ -60,12 +60,12 @@ class ActorNetwork(object):
             self.sess = sess
 
             # Actor Network
-            self.inputs, self.out, self.scaled_out = self.create_actor_network()
+            self.inputs, self.out, self.scaled_out = self.create_actor_network(scope = 'actor')
 
             self.network_params = tf.trainable_variables(scope='actor')
 
             # Target Network
-            self.target_inputs, self.target_out, self.target_scaled_out = self.create_actor_network()
+            self.target_inputs, self.target_out, self.target_scaled_out = self.create_actor_network(scope = 'actor_target')
 
             self.target_network_params = tf.trainable_variables(scope='actor')[
                                          len(self.network_params):]
@@ -78,10 +78,11 @@ class ActorNetwork(object):
                  for i in range(len(self.target_network_params))]
 
             # This gradient will be provided by the critic network
-            self.action_gradient = tf.placeholder(tf.float32, [None, self.a_dim], name='actor_action_grad')
+            self.action_gradient = tf.placeholder(tf.float32, [None, self.action_dim], name='actor_action_grad')
 
             # Combine the gradients here
-            #TODO:  miért minus az action gradient?
+            # TODOdone:  miért minus az action gradient?
+            # http://pemami4911.github.io/blog/2016/08/21/ddpg-rl.html
             self.actor_gradients = tf.gradients(
                 self.scaled_out, self.network_params, -self.action_gradient, name='actor_grads')
 
@@ -99,31 +100,32 @@ class ActorNetwork(object):
             #writer = tf.summary.FileWriter(args['summary_dir'], self.sess.graph)
             #writer.close()
 
-    def create_actor_network(self):
-        inputs = tflearn.input_data(shape=[None, self.s_dim], name='actor_input')
-        net1 = tflearn.fully_connected(inputs, 400, name='actor_fc1')
-        net2 = tflearn.layers.normalization.batch_normalization(net1, name='actor_norm1')
-        net3 = tflearn.activations.relu(net2)
-        net4 = tflearn.fully_connected(net3, 300, name='actor_fc2')
-        net5 = tflearn.layers.normalization.batch_normalization(net4, name='actor_norm2')
-        net6 = tflearn.activations.relu(net5)
-        """ 
-        net = tflearn.fully_connected(net, 30)
-        net = tflearn.layers.normalization.batch_normalization(net)
-        net = tflearn.activations.relu(net)
-        net = tflearn.fully_connected(net, 30)
-        net = tflearn.layers.normalization.batch_normalization(net)
-        net = tflearn.activations.relu(net)
-        """
-        # Final layer weights are init to Uniform[-3e-3, 3e-3]
-        w_init = tflearn.initializations.uniform(minval=-0.003, maxval=0.003)
-        out = tflearn.fully_connected(
-            net6, self.a_dim, activation='tanh', weights_init=w_init, name='actor_output')
-        # Scale output to -action_bound to action_bound
+    def create_actor_network(self, scope = 'actor'):
+        with tf.name_scope(scope):
+            inputs = tflearn.input_data(shape=[None, self.state_dim], name='actor_input')
+            net1 = tflearn.fully_connected(inputs, 400, name='actor_fc1')
+            net2 = tflearn.layers.normalization.batch_normalization(net1, name='actor_norm1')
+            net3 = tflearn.activations.relu(net2)
+            net4 = tflearn.fully_connected(net3, 300, name='actor_fc2')
+            net5 = tflearn.layers.normalization.batch_normalization(net4, name='actor_norm2')
+            net6 = tflearn.activations.relu(net5)
+            """ 
+            net = tflearn.fully_connected(net, 30)
+            net = tflearn.layers.normalization.batch_normalization(net)
+            net = tflearn.activations.relu(net)
+            net = tflearn.fully_connected(net, 30)
+            net = tflearn.layers.normalization.batch_normalization(net)
+            net = tflearn.activations.relu(net)
+            """
+            # Final layer weights are init to Uniform[-3e-3, 3e-3]
+            w_init = tflearn.initializations.uniform(minval=-0.003, maxval=0.003)
+            out = tflearn.fully_connected(
+                net6, self.action_dim, activation='tanh', weights_init=w_init, name='actor_output')
+            # Scale output to -action_bound to action_bound
 
-        scaled_out = tf.multiply(out, self.action_bound)
-        # scaled_out = np.sign(out)
-        return inputs, out, scaled_out
+            scaled_out = tf.multiply(out, self.action_bound)
+            # scaled_out = np.sign(out)
+            return inputs, out, scaled_out
 
     def train(self, inputs, a_gradient):
         self.sess.run(self.optimize, feed_dict={
@@ -158,8 +160,8 @@ class CriticNetwork(object):
 
     def __init__(self, sess, state_dim, action_dim, learning_rate, tau, gamma, num_actor_vars):
         with tf.device(used_device):
-            self.s_dim = state_dim
-            self.a_dim = action_dim
+            self.state_dim = state_dim
+            self.action_dim = action_dim
             self.learning_rate = learning_rate
             self.tau = tau
             self.gamma = gamma
@@ -170,12 +172,12 @@ class CriticNetwork(object):
 
             #self.sess = tf.Session(graph = self.graph)
 
-            self.inputs, self.action, self.out = self.create_critic_network()
+            self.inputs, self.action, self.out = self.create_critic_network(scope = 'critic')
 
             self.network_params = tf.trainable_variables()[num_actor_vars:]
 
             # Target Network
-            self.target_inputs, self.target_action, self.target_out = self.create_critic_network()
+            self.target_inputs, self.target_action, self.target_out = self.create_critic_network(scope = 'critic_target')
 
             self.target_network_params = tf.trainable_variables(scope='critic')[(len(self.network_params) + num_actor_vars):]
 
@@ -210,39 +212,40 @@ class CriticNetwork(object):
             #writer = tf.summary.FileWriter(args['summary_dir'], self.sess.graph)
             #writer.close()
 
-    def create_critic_network(self):
-        inputs = tflearn.input_data(shape=[None, self.s_dim], name='critic_input')
-        net = tflearn.fully_connected(inputs, 400, name='critic_fc1')
-        net = tflearn.layers.normalization.batch_normalization(net, name='critic_norm1')
-        net = tflearn.activations.relu(net)
-        t1 = tflearn.fully_connected(net, 300, name='critic_fc2')
+    def create_critic_network(self, scope = 'critic'):
+        with tf.name_scope(scope):
+            inputs = tflearn.input_data(shape=[None, self.state_dim], name='critic_input')
+            net = tflearn.fully_connected(inputs, 400, name='critic_fc1')
+            net = tflearn.layers.normalization.batch_normalization(net, name='critic_norm1')
+            net = tflearn.activations.relu(net)
+            t1 = tflearn.fully_connected(net, 300, name='critic_fc2')
 
-        # Add the action tensor in the 2nd hidden layer
-        # Use two temp layers to get the corresponding weights and biases
-        action = tflearn.input_data(shape=[None, self.a_dim], name='critic_action_input')
-        t2 = tflearn.fully_connected(action, 300, name='critic_norm2')
-        add_t2 = tf.add(tf.matmul(action, t2.W), t2.b, name='critic_t2_add')
+            # Add the action tensor in the 2nd hidden layer
+            # Use two temp layers to get the corresponding weights and biases
+            action = tflearn.input_data(shape=[None, self.action_dim], name='critic_action_input')
+            t2 = tflearn.fully_connected(action, 300, name='critic_norm2')
+            add_t2 = tf.add(tf.matmul(action, t2.W), t2.b, name='critic_t2_add')
 
-        net = tflearn.activation(tf.add(tf.matmul(net, t1.W), add_t2), activation='relu', name='critic_relu')
-        """
-        net = tflearn.fully_connected(net, 90)
-        net = tflearn.layers.normalization.batch_normalization(net)
-        net = tflearn.activations.relu(net)
-
-        net = tflearn.fully_connected(net, 40)
-        net = tflearn.layers.normalization.batch_normalization(net)
-        net = tflearn.activations.relu(net)
-
-        net = tflearn.fully_connected(net, 20)
-        net = tflearn.layers.normalization.batch_normalization(net)
-        net = tflearn.activations.relu(net)
-        """
-        # linear layer connected to 1 output representing Q(s,a)
-        # Weights are init to Uniform[-3e-3, 3e-3]
-        w_init = tflearn.initializations.uniform(minval=-0.003, maxval=0.003)
-        out = tflearn.fully_connected(net, 1, weights_init=w_init, name='critic_output')
-        self.model = model = tflearn.DNN(out)
-        return inputs, action, out
+            net = tflearn.activation(tf.add(tf.matmul(net, t1.W), add_t2), activation='relu', name='critic_relu')
+            """
+            net = tflearn.fully_connected(net, 90)
+            net = tflearn.layers.normalization.batch_normalization(net)
+            net = tflearn.activations.relu(net)
+    
+            net = tflearn.fully_connected(net, 40)
+            net = tflearn.layers.normalization.batch_normalization(net)
+            net = tflearn.activations.relu(net)
+    
+            net = tflearn.fully_connected(net, 20)
+            net = tflearn.layers.normalization.batch_normalization(net)
+            net = tflearn.activations.relu(net)
+            """
+            # linear layer connected to 1 output representing Q(s,a)
+            # Weights are init to Uniform[-3e-3, 3e-3]
+            w_init = tflearn.initializations.uniform(minval=-0.003, maxval=0.003)
+            out = tflearn.fully_connected(net, 1, weights_init=w_init, name='critic_output')
+            self.model = model = tflearn.DNN(out)
+            return inputs, action, out
 
     def train(self, inputs, action, predicted_q_value):
         with tf.variable_scope('critic'):
@@ -342,9 +345,9 @@ def train(sess, env, args, actor, critic, actor_noise, replay_buffer):
 
     # Initialize target network weights
     actor.update_target_network()
-    print("actor initialised")
+    print("target actor initialised")
     critic.update_target_network()
-    print("critic initialised")
+    print("target critic initialised")
 
     # nem minden epizodot fogunk kirajzolni, mert lassú. Lásd később
     draws = 1
@@ -388,7 +391,8 @@ def train(sess, env, args, actor, critic, actor_noise, replay_buffer):
         # ------------------kornyezet kirajzolasahoz---------------------------------
         color = (1, 0, 0)
         draw = False
-        if i == draws:
+        # modified to work correctly
+        if i%draws == 0:
             draw = True
             draws = draws + int(args['max_episodes']) / draws_per_fullepisodes
             if use_matplotlib:
@@ -436,7 +440,7 @@ def train(sess, env, args, actor, critic, actor_noise, replay_buffer):
                     print("\033[94m {}\033[00m".format("        -------ref norm rand action:"), a)
                 else:
                     if j < env.ref_actions.size:
-                        a = env.ref_actions[j] # int(actor.predict(np.reshape(s, (1, actor.s_dim))))
+                        a = env.ref_actions[j] # int(actor.predict(np.reshape(s, (1, actor.state_dim))))
                         print("\033[93m {}\033[00m" .format("        -------ref action:"), a)
                     else:
                         a = int(rnd.uniform(-180, 180))
@@ -450,11 +454,11 @@ def train(sess, env, args, actor, critic, actor_noise, replay_buffer):
                     #a = int(np.random.normal(env.ref_actions[j], 120, size=1))
                     print("\033[94m {}\033[00m".format("        -------Rnd2 RndUni action:"), a)
                 else:
-                    a = int(actor.predict(np.reshape(s, (1, actor.s_dim))))
+                    a = int(actor.predict(np.reshape(s, (1, actor.state_dim))))
                     print("\033[94m {}\033[00m".format("        -------Rnd2 Net action:"), a)
                 # ha semmifeltetel a fentiekbol nem teljesul, akkor meg a halo altal mondott lepest lepjuk
             else:
-                a = int(actor.predict(np.reshape(s, (1, actor.s_dim))) + 0 * actor_noise()) + int(
+                a = int(actor.predict(np.reshape(s, (1, actor.state_dim))) + 0 * actor_noise()) + int(
                     np.random.randint(-3, 3, size=1))
 
                 print("Netwrk action:--------", a)
@@ -473,7 +477,7 @@ def train(sess, env, args, actor, critic, actor_noise, replay_buffer):
             ep_reward += r
 
             #és akkor a megfeleltetett változókkal már lehet csinálni a replay memory-t:
-            replay_buffer.add(np.reshape(s, (actor.s_dim,)), np.reshape(a, (actor.a_dim,)), r, terminal, np.reshape(s2, (actor.s_dim,)))
+            replay_buffer.add(np.reshape(s, (actor.state_dim,)), np.reshape(a, (actor.action_dim,)), r, terminal, np.reshape(s2, (actor.state_dim,)))
 
             # Keep adding experience to the memory until there are at least minibatch size samples, És amig a
             # tanulas elejen a random lepkedos fazisban vagyunk.
@@ -497,7 +501,7 @@ def train(sess, env, args, actor, critic, actor_noise, replay_buffer):
 
                 # Update the actor policy using the sampled gradient
                 a_outs = actor.predict(s_batch)
-                #TODO: emiatt lassu
+                #TODOdone: emiatt lassu, nem biztos
                 # gradienseket ezzel kiolvassa a tensorflow graph-ból és visszamásolja
                 grads = critic.action_gradients(s_batch, a_outs)
                 actor.train(s_batch, grads[0])
