@@ -1,11 +1,14 @@
 "Ez a HPC-s verzio³"
 
-OnHPC = True
+OnHPC = False
+
+use_matplotlib = True
 
 if OnHPC:
-    use_matplotlib = False
-else:
-    use_matplotlib = True
+    # https://stackoverflow.com/questions/9622163/save-plot-to-image-file-instead-of-displaying-it-using-matplotlib
+    #cannot use interactive backend
+    import matplotlib as mpl
+    mpl.use('Agg')
 
 if use_matplotlib:
     import matplotlib.pyplot as plt
@@ -108,12 +111,26 @@ class PaperRaceEnv:
         if use_matplotlib:
             plt.imshow(self.trk_pic)
 
+    def draw_sections(self):
         # Szakaszok kirajzolása
         for i in range(len(self.sections)):
-            if use_matplotlib:
                 X = np.array([self.sections[i][0], self.sections[i][2]])
                 Y = np.array([self.sections[i][1], self.sections[i][3]])
-                plt.plot(X, Y, color='blue')
+                self.draw_section(X, Y, color='blue')
+
+    def draw_clear(self):
+        if use_matplotlib:
+            plt.clf()
+
+    def draw_section(self, X, Y, color):
+        if use_matplotlib:
+            plt.plot(X, Y, color=color)
+            plt.pause(0.001)
+            plt.draw()
+
+    def draw_save(self, path = './img/', name = 'figure', count = '', extension = '.fig'):
+        if use_matplotlib:
+            plt.savefig(path + name + count + extension)
 
     def step(self, spd_chn, spd_old, pos_old, draw, color):
 
@@ -304,10 +321,10 @@ class PaperRaceEnv:
                 reward = 1
             """
 
-            if use_matplotlib:
+            if draw:
                 X = np.array([pos_temp_in_old[0], pos_temp_out_old[0]])
                 Y = np.array([pos_temp_in_old[1], pos_temp_out_old[1]])
-                plt.plot(X, Y, color='magenta')
+                self.draw_section(X, Y, color='magenta')
 
         # ha barmi miatt az autó megáll, sebesseg zerus, akkor vége
         if np.array_equal(spd_new, [0, 0]):
@@ -315,10 +332,7 @@ class PaperRaceEnv:
 
         # Ha akarjuk, akkor itt rajzoljuk ki az aktualis lepes abrajat (lehet maskor kene)
         if draw: # kirajzolja az autót
-            if use_matplotlib:
-                X = np.array([pos_old[0], pos_new[0]])
-                Y = np.array([pos_old[1], pos_new[1]])
-                plt.plot(X, Y, color=color)
+            self.draw_section(X, Y, color=color)
 
         return spd_new, pos_new, reward, end, section_nr
 
@@ -672,8 +686,8 @@ class PaperRaceEnv:
         ref_steps = np.zeros(len(ref_actions))
         ref_dist = np.zeros(len(ref_actions))
 
-        if use_matplotlib:
-             plt.clf()
+
+        self.draw_clear()
         self.draw_track()
 
         for i in steps_nr:
@@ -687,11 +701,6 @@ class PaperRaceEnv:
             epreward = epreward + reward
             ref_steps[i] = -epreward
 
-            if True:
-                if use_matplotlib:
-                    plt.pause(0.001)
-                    plt.draw()
-
             v = v_new
             pos = pos_new
 
@@ -700,7 +709,7 @@ class PaperRaceEnv:
 
         return ref_dist, ref_steps
 
-    def __get_dists_in(self, rajz=False):
+    def __get_dists_in(self, draw=False):
         """
         "feltérképezi" a pályát a reward fv-hez
         a start pontban addig növel egy korongot, amíg a korong a pálya egy belső pixelét (piros) nem fedi
@@ -739,7 +748,7 @@ class PaperRaceEnv:
         dirs = [JOBB, FEL, BAL, LE]
         direction_idx = 0
         point = start_point
-        if rajz:
+        if draw:
             self.draw_track()
         while True:
             dist += 1 # a távolságot növeli 1-gyel
@@ -756,20 +765,15 @@ class PaperRaceEnv:
 
             dist_dict_in[tuple(point)] = dist # a pontot belerakjuk a dictionarybe
 
-            if rajz:
-                if use_matplotlib:
-                    plt.plot([point[0]], [point[1]], 'yo')
+            if draw:
+                self.draw_section([point[0]], [point[1]], 'y')
 
             if np.array_equal(point, start_point): # ha visszaértünk az elejére, akkor leállunk
                 break
-        if rajz:
-            if use_matplotlib:
-                plt.pause(0.001)
-                plt.draw()
 
         return dist_dict_in
 
-    def __get_dists_out(self, rajz=False):
+    def __get_dists_out(self, draw=False):
         """
         "feltérképezi" a pályát a reward fv-hez
         a start pontban addig növel egy korongot, amíg a korong a pálya egy belső pixelét (piros) nem fedi
@@ -813,7 +817,7 @@ class PaperRaceEnv:
         dirs = [BAL, LE, JOBB, FEL]
         direction_idx = 0
         point = start_point
-        if rajz:
+        if draw:
             self.draw_track()
         while True:
             dist += 1 # a távolságot növeli 1-gyel
@@ -830,15 +834,10 @@ class PaperRaceEnv:
 
             dist_dict_out[tuple(point)] = dist # a pontot belerakjuk a dictionarybe
 
-            if rajz:
-                if use_matplotlib:
-                    plt.plot([point[0]], [point[1]], 'yo')
+            if draw:
+                self.draw_section([point[0]], [point[1]], 'y')
 
             if np.array_equal(point, start_point): # ha visszaértünk az elejére, akkor leállunk
                 break
-        if rajz:
-            if use_matplotlib:
-                plt.draw()
-                plt.pause(0.001)
 
         return dist_dict_out

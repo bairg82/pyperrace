@@ -13,18 +13,10 @@ import os
 
 "!!!Ez a HPC-s verziÃ³"
 
-OnHPC = True
+# OnHPC = True
 
 # used_device = '/gpu:0'
 used_device = '/cpu:0'
-
-if OnHPC:
-    use_matplotlib = False
-else:
-    use_matplotlib = True
-
-if use_matplotlib:
-    import matplotlib.pyplot as plt #a kirajzoláshoz kell, de lassú szar
 
 #import gym
 from environment import PaperRaceEnv
@@ -349,12 +341,29 @@ def train(sess, env, args, actor, critic, actor_noise, replay_buffer):
     critic.update_target_network()
     print("target critic initialised")
 
+    # ----------------------------
+
     # nem minden epizodot fogunk kirajzolni, mert lassú. Lásd később
-    draws = 1
+    # draws = 1
 
     # osszes tanulas alatt ennyiszer rajzolunk:
-    draws_per_fullepisodes = 2000
 
+    # draw_config = 'allepisode'
+    draws = 1
+
+    # draw_config = 'perxepisode'
+    # draws = 100
+
+    # draw_config = 'maxdrawsx'
+    # draws_per_fullepisodes = max(1, int(args['max_episodes']) / draws_per_fullepisodes)
+
+    # draws_config = 'drawnothing'
+    # draws = 0
+
+    # where to draw
+    draw_where = {'window': True, 'file': True}
+
+    # ----------------------------
 
     # A koncepcio az lesz hogy generalunk egy 0-1 kozotti szamot, aminel majd kell random szamnak kisebbnek kell
     # lenni es akkor teljesul egy feltetel
@@ -390,15 +399,19 @@ def train(sess, env, args, actor, critic, actor_noise, replay_buffer):
 
         # ------------------kornyezet kirajzolasahoz---------------------------------
         color = (1, 0, 0)
-        draw = False
-        # modified to work correctly
+
+        # draw in this episode
         if i%draws == 0:
             draw = True
-            draws = draws + int(args['max_episodes']) / draws_per_fullepisodes
-            if use_matplotlib:
-                plt.clf()
-            env.draw_track()
+        else:
+            draw = False
+
         # ---------------------------------------------------------------------------
+
+        # drawing
+        if draw:
+            env.draw_clear()
+            env.draw_track()
 
         # Exploration-joz: Ha mas nincs, ne veletlenszeruen lepkedjen
         rand_episode = False
@@ -510,11 +523,6 @@ def train(sess, env, args, actor, critic, actor_noise, replay_buffer):
                 actor.update_target_network()
                 critic.update_target_network()
 
-            if draw:
-                if use_matplotlib:
-                    plt.pause(0.001)
-                    plt.draw()
-
             #a kovetkezo lepeshez uj s legyen egyenlo az aktualis es folytatjuk
             #s = s2
             v = v_new
@@ -532,8 +540,9 @@ def train(sess, env, args, actor, critic, actor_noise, replay_buffer):
                 writer.add_summary(summary_str, i)
                 writer.flush()
 
-                if draw:
-                    print('\033[91m| Reward: {:.3f} | Episode: {:d} | Qmax: {:.4f}'.format(ep_reward, i, (ep_ave_max_q / float(j))))
+                if draw_where['file']:
+                    env.draw_save(name='e', count='i')
+
                 else:
                     print('| Reward: {:.3f} | Episode: {:d} | Qmax: {:.4f}'.format(ep_reward, i, (ep_ave_max_q / float(j))))
 
