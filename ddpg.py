@@ -541,7 +541,7 @@ def train(sess, env, args, actor, critic, actor_noise, replay_buffer):
                 writer.flush()
 
                 if draw_where['file']:
-                    env.draw_save(name='e', count='i')
+                    env.draw_save(name='e', count=str(i))
 
                 else:
                     print('| Reward: {:.3f} | Episode: {:d} | Qmax: {:.4f}'.format(ep_reward, i, (ep_ave_max_q / float(j))))
@@ -573,7 +573,7 @@ def main(args):
         #                    #[190, 125, 190, 64]])
 
         #palya4 teljes
-        #sections = np.array([[273, 125, 273, 64],  # [333, 125, 333, 64],[394, 157, 440, 102],[240, 400, 330, 380]
+        # sections = np.array([[273, 125, 273, 64],  # [333, 125, 333, 64],[394, 157, 440, 102],[240, 400, 330, 380]
         #                     [100, 250, 180, 250]])
 
         # palya5.bmp-hez:

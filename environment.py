@@ -1,6 +1,6 @@
 "Ez a HPC-s verzio³"
 
-OnHPC = False
+OnHPC = True
 
 use_matplotlib = True
 
@@ -86,17 +86,17 @@ class PaperRaceEnv:
                 if np.array_equal(self.trk_pic[y, x, :], self.trk_col):
                     self.track_indices.append([x, y])
 
-        self.dists_in = self.__get_dists_in(True) # a kezdőponttól való "távolságot" tárolja a reward fv-hez
-        self.dists_out = self.__get_dists_out(True) # a kezdőponttól való "távolságot" tárolja
+        self.dists_in = self.__get_dists_in(False) # a kezdőponttól való "távolságot" tárolja a reward fv-hez
+        self.dists_out = self.__get_dists_out(False) # a kezdőponttól való "távolságot" tárolja
         # print("DictIn:", self.dists_in)
         # print("DictOut:", self.dists_out)
 
 
         # van egy referencia lepessor ami valahogy beér a célba (palya4) :
-        #self.ref_actions = np.array([0, -180, -95, -95, -90, -95])
-        #self.ref_actions = np.array([0, -180, -96, -97, -110, -105, -105, -105, -110, 110, 110, 100, 50,
+        # self.ref_actions = np.array([0, -180, -95, -95, -90, -95])
+        # self.ref_actions = np.array([0, -180, -96, -97, -110, -105, -105, -105, -110, 110, 110, 100, 50,
         #                            150, 150, 90, 40, -140, -100, -120, -120, -120, -65, -20, -25, -80,
-        #                            -110, -110, -110, -95])
+        #                           -110, -110, -110, -95])
         # van egy referencia lepessor ami valahogy beér a célba (palya5) :
         self.ref_actions = np.array([0, 150, 180, -160, -160, -160, -150, -90, -90, -110, -110, -120, -110, -110, 0,
                                      90, -90, 90, -140, 90, 110, 90, 120, 120, 120, 120, 100, -20, -10, 0, 0, 0, 0])
@@ -128,7 +128,7 @@ class PaperRaceEnv:
             plt.pause(0.001)
             plt.draw()
 
-    def draw_save(self, path = './img/', name = 'figure', count = '', extension = '.fig'):
+    def draw_save(self, path = './img/', name = 'figure', count = '', extension = '.png'):
         if use_matplotlib:
             plt.savefig(path + name + count + extension)
 
@@ -332,6 +332,8 @@ class PaperRaceEnv:
 
         # Ha akarjuk, akkor itt rajzoljuk ki az aktualis lepes abrajat (lehet maskor kene)
         if draw: # kirajzolja az autót
+            X = np.array([pos_old[0], pos_new[0]])
+            Y = np.array([pos_old[1], pos_new[1]])
             self.draw_section(X, Y, color=color)
 
         return spd_new, pos_new, reward, end, section_nr
