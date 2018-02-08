@@ -329,7 +329,8 @@ def train(sess, env, args, actor, critic, actor_noise, replay_buffer):
 
     sess.run(tf.global_variables_initializer())
 
-    saver = tf.train.Saver()
+    # to save all 100th
+    saver = tf.train.Saver(max_to_keep=0)
 
     # writer = tf.summary.FileWriter((args['summary_dir']))
     writer = tf.summary.FileWriter(logdir = args['summary_dir'], graph = sess.graph)
@@ -543,8 +544,7 @@ def train(sess, env, args, actor, critic, actor_noise, replay_buffer):
                 if draw_where['file']:
                     env.draw_save(name='e', count=str(i))
 
-                else:
-                    print('| Reward: {:.3f} | Episode: {:d} | Qmax: {:.4f}'.format(ep_reward, i, (ep_ave_max_q / float(j))))
+                print('| Reward: {:.3f} | Episode: {:d} | Qmax: {:.4f}'.format(ep_reward, i, (ep_ave_max_q / float(j))))
 
                 break
 

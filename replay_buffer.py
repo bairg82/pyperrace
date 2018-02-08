@@ -34,13 +34,16 @@ class ReplayBuffer(object):
     def size(self):
         return self.count
 
-    def sample_batch(self, batch_size):
+    def sample_batch(self, batch_size, get_all = False):
         batch = []
 
-        if self.count < batch_size:
-            batch = random.sample(self.buffer, self.count)
+        if get_all:
+            batch = self.buffer
         else:
-            batch = random.sample(self.buffer, batch_size)
+            if self.count < batch_size:
+                batch = random.sample(self.buffer, self.count)
+            else:
+                batch = random.sample(self.buffer, batch_size)
 
         s_batch = np.array([_[0] for _ in batch])
         a_batch = np.array([_[1] for _ in batch])
@@ -78,12 +81,14 @@ class ReplayBuffer(object):
         # based on this:
         # https://docs.scipy.org/doc/numpy-1.13.0/reference/generated/numpy.savez.html#numpy.savez
 
+        added = 0
+
         # loading experience from file
         try:
             npzfile = np.load(file)
         except:
             # do nothing
-            added = 0
+            pass
 
         if npzfile != None:
             s = npzfile['s']
@@ -94,9 +99,9 @@ class ReplayBuffer(object):
 
             # this might be slow
             # adding items by one
-            added = s.shape(0)
-            for i in added:
+            for i in range(len(s)):
                 self.add(s[i], a[i], r[i], t[i], s2[i])
+                added += 1
 
         return added
 
