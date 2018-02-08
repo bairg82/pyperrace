@@ -36,15 +36,18 @@ sections = np.array([[273, 125, 273, 64],
 """
 #sections = np.array([[273, 125, 273, 64],  # [333, 125, 333, 64],[394, 157, 440, 102],[240, 400, 330, 380]])
 #                     [80, 250, 180, 250]])
-
+"""
 # palya5.bmp-hez:
 sections = np.array([[670, 310, 670, 130],  # [333, 125, 333, 64],[394, 157, 440, 102],
                      [1250, 680, 1250, 550]])
-
+"""
+# h1.bmp-hez:
+sections = np.array([[200, 220, 200, 50],  # [333, 125, 333, 64],[394, 157, 440, 102],
+                     [200, 1250, 250, 1400]])
 
 # start_line = np.array([32, 393, 32, 425]) # sigmoid alakú pálya
 
-env = PaperRaceEnv('PALYA5.bmp', trk_col, 'GG1.bmp', sections, random_init=False) # paperrace környezet létrehozása
+env = PaperRaceEnv('h1.bmp', trk_col, 'GG1.bmp', sections, random_init=False) # paperrace környezet létrehozása
 mem_size = 100 # a memória mérete, amiből a batch-be válogatunk
 batch_size = 10 # batch mérete, ami a tanítási adatokat tartalmazza
 episodes = 1000 # hányszor fusson a tanítás
