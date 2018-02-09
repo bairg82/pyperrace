@@ -20,6 +20,7 @@ from numpy import linalg as LA
 from random import randint
 from skimage.morphology import disk
 from skimage.color import rgb2gray
+from collections import deque
 
 class PaperRaceEnv:
     """ez az osztály biztosítja a tanuláshoz a környezetet"""
@@ -521,68 +522,148 @@ class PaperRaceEnv:
 
         return data
 
+    def pixel_in_track(self, x, y, color):
+        if self.trk[x, y] == color:
+            # inside colored pixel found
+            return np.array(x, y)
+        else:
+            return False
+
     # TODO there is an error, it is very slow
     # there is a better way
     # https://stackoverflow.com/questions/307445/finding-closest-non-black-pixel-in-an-image-fast
-    def get_ref(self, pos_new):
+    def get_ref(self, position):
 
         """Ref adatokat ado fuggveny.
-        pos_new csak palyan levo pont lehet, ha enm akkor hibat fog adni.
+        posision csak palyan levo pont lehet, ha enm akkor hibat fog adni.
+        Nincs vizsgálat erre
         Input tehat:
-        pos_new: a palya egy adott pontja
+        position: a palya egy adott pontja
 
         Output:
         belso iv menten megtett ut,kulso iv menten megtett ut, belso iv referencia pontja, es kulso iv ref pontja"""
 
-        # az algoritmus alapvetoen  úgy működik, hogy az aktuális pozícióban egyre negyobb sugárral
-        # létrehoz egy diszket, amivel megnézi, hogy van -e r sugarú környezetében piros pixel
-        # ha igen, akkor azt a pixelt kikeresi a dist_dict-ből, majd megnezi ehhez mennyi a ref sebesseggel mennyi ido
+        # TODO ezt lehet javítani azzal ha van egy lookup table is amiben eltároljuk a már kikeresett információt
+        # TODO így azt nem kell mindig költésgesen újra számolni
+
+        # az algoritmus működik, hogy az aktuális pozícióban egyre nagyobb négyzetet rajzol, aminek a pixelein végig
+        # végig megy ezt addig csinálja amíg nem talál egyet és a talált pont távolságánál 2 szer nagyobb a szélesség
+        #
+        # akkor azt a pixelt kikeresi a dist_dict-ből, majd megnezi ehhez mennyi a ref sebesseggel mennyi ido
         # jar
 
-        #self.trk = rgb2gray(self.trk_pic) # szürkeárnyalatosban dolgozunk
-        pos_new = np.array(pos_new, dtype='int32')
+        # konvertálás -> np array
+        posisiton_np = np.array(position, dtype='int32')
 
         # pos_new-el egy vonalban levo belso pont meghatarozasa---------
-        tmp_in = [0]
-        #_in = rgb2gray(np.reshape(self.track_inside_color, (1, 1, 3)))
-        r_in = 0
-        while not np.any(tmp_in):
-            r_in = r_in + 1 # növeljük a disc sugarát
-            mask_in = disk(r_in)
-            tmp_in = self.trk[pos_new[1] - r_in:pos_new[1] + r_in + 1, pos_new[0] - r_in:pos_new[0] + r_in + 1] # vesszük az aktuális pozíció körüli 2rx2r-es négyzetet
-            # neha a tmp_in nem negyzetes alaku... (MIÉÉÉÉ???) mindenesetre ezt csekkoljuk:
-            if not tmp_in.shape[0] == tmp_in.shape[1]:
-                tmp_in0 = np.zeros((2*r_in + 1, 2*r_in + 1))
-                tmp_in0[0:tmp_in.shape[0], 0:tmp_in.shape[1]] =tmp_in
-                tmp_in = tmp_in0
+        # tmp_in = [0]
+        inside_pixels = []
+        inside_pixel_distances = []
+        outside_pixels = []
+        outside_pixel_distances = []
+        # this is the box edge distance from the pixel
+        scan_dist = 0
+        search_succesful = False
+        search_terminated = False
+        top_edge_reached = False
+        bottom_edge_reached = False
+        right_edge_reached = False
+        left_edge_reached = False
 
-            tmp_in = np.multiply(mask_in, tmp_in) # maszkoljuk a disc-kel
-            tmp_in[tmp_in != self.col_in] = 0 # megnézzük, hogy van -e benne belso szin
-        indices_in = [p[0] for p in np.nonzero(tmp_in)] # ha volt benne piros, akkor lekérjük a pozícióját
-        offset_in = [indices_in[1] - r_in, indices_in[0] - r_in] # eltoljuk, hogy megkapjuk a kocsihoz viszonyított relatív pozícióját
-        pos_in = np.array(pos_new + offset_in) # kiszámoljuk a pályán lévő pozícióját a pontnak
+        best_inside_pixel_found = False
+        best_outside_pixel_found = False
 
-        # pos_new-el egy vonalban levo kulso pont meghatarozasa---------
-        tmp_out = [0]
-        #col_out = rgb2gray(np.reshape(self.track_outside_color, (1, 1, 3)))
-        r_out = 0
-        while not np.any(tmp_out):
-            r_out = r_out + 1  # növeljük a disc sugarát
-            tmp_out = self.trk[pos_new[1] - r_out:pos_new[1] + r_out + 1, pos_new[0] - r_out:pos_new[0] + r_out + 1]  # vesszük az aktuális pozíció körüli 2rx2r-es négyzetet
-            mask_out = disk(r_out)
-            tmp_out = self.trk[pos_new[1] - r_out:pos_new[1] + r_out + 1, pos_new[0] - r_out:pos_new[0] + r_out + 1]  # vesszük az aktuális pozíció körüli 2rx2r-es négyzetet
-            # neha a tmp_in nem negyzetes alaku... (MIÉÉÉÉ???) mindenesetre ezt csekkoljuk:
-            if not tmp_out.shape[0] == tmp_in.shape[1]:
-                tmp_out0 = np.zeros((2*r_out + 1, 2*r_out + 1))
-                tmp_out0[0:tmp_out.shape[0], 0:tmp_out.shape[1]] = tmp_out
-                tmp_out = tmp_out0
+        while ((not search_succesful) and (not search_terminated)):
+            scan_dist = scan_dist + 1 # növeljük a boxot
+            left_edge = position[0] - scan_dist
+            right_edge = position[0] + scan_dist
+            top_edge = position[1] - scan_dist
+            bottom_edge = position[1] + scan_dist
 
-            tmp_out = np.multiply(mask_out, tmp_out)  # maszkoljuk a disc-kel
-            tmp_out[tmp_out != self.col_out] = 0  # megnézzük, hogy van -e benne kulso szin
-        indices_out = [p[0] for p in np.nonzero(tmp_out)]  # ha volt benne piros, akkor lekérjük a pozícióját
-        offset_out = [indices_out[1] - r_out, indices_out[0] - r_out]  # eltoljuk, hogy megkapjuk a kocsihoz viszonyított relatív pozícióját
-        pos_out = np.array(pos_new + offset_out)  # kiszámoljuk a pályán lévő pozícióját a pontnak
+            # if an edge is reached we wont search there, because tahat pixels doesn exist
+            # and edges are modified (max or min) to work in other edge search
+            if left_edge < 0:
+                left_edge_reached = True
+                left_edge = 0
+            if right_edge > self.trk.shape[1]:
+                right_edge_reached = True
+                right_edge = self.trk.shape[1]
+            if top_edge < 0:
+                top_edge_reached = True
+                top_edge = 0
+            if bottom_edge > self.trk.shape[0]:
+                bottom_edge_reached = True
+                bottom_edge = self.trk.shape[0]
 
+            # all edge is reached search is terminated
+            if (left_edge_reached and right_edge_reached and top_edge_reached and bottom_edge_reached):
+                search_terminated = True
+
+            # left edge pixel column
+            if not left_edge_reached:
+                for i in range(top_edge, bottom_edge):
+                    # inside colored pixel found
+                    if self.trk[i, left_edge] == self.col_in:
+                        inside_pixels.append([left_edge, i])
+                        inside_pixel_distances.append(np.sqrt((left_edge-position[0])**2 + (i - position[1])**2))
+                    # outside colored pixel found
+                    if self.trk[i, left_edge] == self.col_out:
+                        outside_pixels.append([left_edge, i])
+                        outside_pixel_distances.append(np.sqrt((left_edge - position[0])**2 + (i - position[1])**2))
+
+            # right edge pixel column
+            if not right_edge_reached:
+                for i in range(top_edge, bottom_edge):
+                    # inside colored pixel found
+                    if self.trk[i, right_edge] == self.col_in:
+                        inside_pixels.append([right_edge, i])
+                        inside_pixel_distances.append(np.sqrt((right_edge - position[0])**2 + (i - position[1])**2))
+                    # outside colored pixel found
+                    if self.trk[i, right_edge] == self.col_out:
+                        outside_pixels.append([right_edge, i])
+                        outside_pixel_distances.append(np.sqrt((right_edge - position[0])**2 + (i - position[1])**2))
+
+            # top edge pixel row
+            if not top_edge_reached:
+                for i in range(left_edge, right_edge):
+                    # inside colored pixel found
+                    if self.trk[top_edge, i] == self.col_in:
+                        inside_pixels.append([i, top_edge])
+                        inside_pixel_distances.append(np.sqrt((i - position[0])**2 + (top_edge - position[1])**2))
+                    # outside colored pixel found
+                    if self.trk[top_edge, i] == self.col_out:
+                        outside_pixels.append([i, top_edge])
+                        outside_pixel_distances.append(np.sqrt((i - position[0])**2 + (top_edge - position[1])**2))
+
+            # bottom edge pixel row
+            if not bottom_edge_reached:
+                for i in range(left_edge, right_edge):
+                    # inside colored pixel found
+                    if self.trk[bottom_edge, i] == self.col_in:
+                        inside_pixels.append([i, bottom_edge])
+                        inside_pixel_distances.append(np.sqrt((i - position[0])**2 + (bottom_edge - position[1])**2))
+                    # outside colored pixel found
+                    if self.trk[bottom_edge, i] == self.col_out:
+                        outside_pixels.append([i, bottom_edge])
+                        outside_pixel_distances.append(np.sqrt((i - position[0])**2 + (bottom_edge - position[1])**2))
+
+            # all pixels investigated on perimeter
+
+            #best inside track pixel is reached
+            if len(inside_pixels) > 0:
+                if min(inside_pixel_distances) < scan_dist:
+                    best_inside_pixel_found = True
+                    pos_in = inside_pixels[inside_pixel_distances.index(min(inside_pixel_distances))]
+            #best outside track edge is reached
+            if len(outside_pixels) > 0:
+                if min(outside_pixel_distances) < scan_dist:
+                    best_outside_pixel_found = True
+                    pos_out = outside_pixels[outside_pixel_distances.index(min(outside_pixel_distances))]
+
+                    # check if goal is reached
+            if best_inside_pixel_found and best_outside_pixel_found == True:
+                search_succesful = True
+        # end of while -> pixel search
 
         # A kapott belso es kulso pontokrol megnezni milyen messze vannak a starttol:--------------------------
 
@@ -593,6 +674,7 @@ class PaperRaceEnv:
             curr_dist_in = self.dists_in[tuple(pos_in)] # a dist_dict-ből lekérjük a start-tól való távolságát
             curr_dist_out = self.dists_out[tuple(pos_out)] # a dist_dict-ből lekérjük a start-tól való távolságát
         else:
+            # TODO ezt el kéne kerülni, ha jó a fenti rész ez nem hívódik meg
             # ha nincsennek a kapott potok a dict-ben, akkor a külsö-belsö pontokat osszekoto szakaszon levo ponthoz
             # kerunk ref-et. Ez sem igazan jo megoldas dehat...
   #ITT EZ A BUZI VEGTELEN REKURZIOBA KERUL HA KOZEL LEPUNK A FALHOZ pl az envterstben az elso lepes 15, es utana pl.5
