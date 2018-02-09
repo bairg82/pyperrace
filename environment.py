@@ -521,11 +521,14 @@ class PaperRaceEnv:
 
         return data
 
+    # TODO there is an error, it is very slow
+    # there is a better way
+    # https://stackoverflow.com/questions/307445/finding-closest-non-black-pixel-in-an-image-fast
     def get_ref(self, pos_new):
 
         """Ref adatokat ado fuggveny.
         pos_new csak palyan levo pont lehet, ha enm akkor hibat fog adni.
-        INput tehat:
+        Input tehat:
         pos_new: a palya egy adott pontja
 
         Output:
