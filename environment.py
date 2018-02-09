@@ -874,7 +874,7 @@ class PaperRaceEnv:
         :return: dictionary, ami (pálya belső pontja, távolság) párokat tartalmaz
         """
 
-        dist_dict_out = {} # dictionary, (pálya belső pontja, távolság) párokat tartalmaz
+        dist_dict_out = {} # dictionary, (pálya külső pontja, távolság) párokat tartalmaz
 
         # a generalashoz a start pozicio alapbol startvonal kozepe lenne. De valahogy a startvonal kozeleben a dist az
         # szar tud lenni ezert az algoritmus kezdo pontjat a startvonal kicsit visszabbra tesszuk.
@@ -904,30 +904,34 @@ class PaperRaceEnv:
 
         # INNENTOL KEZDVE A LENTI KOMMENTEK SZAROK!!! A KULSO IVEN MAS "FORGASIRANY" SZERINT KELL KORBEMENNI EZERT MEG
         # VANNAK MASITVA A dirs-benAZ IRANYOK SORRENDJE A __get_dist_in-hez kepest!!!
-        dirs = [BAL, LE, JOBB, FEL]
+        dirs = [JOBB, LE, BAL, FEL]
         direction_idx = 0
         point = start_point
         if draw:
             self.draw_track()
         while True:
             dist += 1 # a távolságot növeli 1-gyel
-            bal_ford = dirs[(direction_idx + 1) % 4] # a balra lévő pixel eléréséhez
-            jobb_ford = dirs[(direction_idx - 1) % 4] # a jobbra lévő pixel eléréséhez
-            if self.trk[point[1] + bal_ford[1], point[0] + bal_ford[0]] == self.col_out: # ha a tőlünk balra lévő pixel piros
-                direction_idx = (direction_idx + 1) % 4 # akkor elfordulunk balra
-                point = point + bal_ford
-            elif self.trk[point[1] + dirs[direction_idx][1], point[0] + dirs[direction_idx][0]] == self.col_out: # ha az előttünk lévő pixel piros
+            bal_ford = dirs[(direction_idx - 1) % 4] # a balra lévő pixel eléréséhez
+            jobb_ford = dirs[(direction_idx + 1) % 4] # a jobbra lévő pixel eléréséhez
+            if self.trk[point[1] + jobb_ford[1], point[0] + jobb_ford[0]] == self.col_out: # ha a tőlünk jobbra lévő pixel fehér
+                direction_idx = (direction_idx + 1) % 4 # akkor elfordulunk jobbra
+                point = point + jobb_ford
+            elif self.trk[point[1] + dirs[direction_idx][1], point[0] + dirs[direction_idx][0]] == self.col_out: # ha az előttünk lévő pixel fehér
                 point = point + dirs[direction_idx] # akkor arra megyünk tovább
             else:
                 direction_idx = (direction_idx - 1) % 4 # különben jobbra fordulunk
-                point = point + jobb_ford
-
-            dist_dict_out[tuple(point)] = dist # a pontot belerakjuk a dictionarybe
+                point = point + bal_ford
 
             if draw:
                 self.draw_section([point[0]], [point[1]], 'y')
 
+            # ha visszaértünk az elejére, akkor leállunk
             if np.array_equal(point, start_point): # ha visszaértünk az elejére, akkor leállunk
                 break
+            # ha lemegyünk a képről akkor is leállunk
+            if (point[0] < 0 or point[1] < 0 or point[0] >= self.trk.shape[1] or point[1] >= self.trk.shape[0]):
+                break
+
+            dist_dict_out[tuple(point)] = dist # a pontot belerakjuk a dictionarybe
 
         return dist_dict_out
