@@ -575,10 +575,10 @@ class PaperRaceEnv:
 
         while ((not search_succesful) and (not search_terminated)):
             scan_dist = scan_dist + 1 # növeljük a boxot
-            left_edge = position[0] - scan_dist
-            right_edge = position[0] + scan_dist
-            top_edge = position[1] - scan_dist
-            bottom_edge = position[1] + scan_dist
+            left_edge = int(position[0]) - scan_dist
+            right_edge = int(position[0]) + scan_dist
+            top_edge = int(position[1]) - scan_dist
+            bottom_edge = int(position[1]) + scan_dist
 
             # if an edge is reached we wont search there, because tahat pixels doesn exist
             # and edges are modified (max or min) to work in other edge search
@@ -605,7 +605,7 @@ class PaperRaceEnv:
                     # inside colored pixel found
                     if self.trk[i, left_edge] == self.col_in:
                         inside_pixels.append([left_edge, i])
-                        inside_pixel_distances.append(np.sqrt((left_edge-position[0])**2 + (i - position[1])**2))
+                        inside_pixel_distances.append(np.sqrt((left_edge - position[0])**2 + (i - position[1])**2))
                     # outside colored pixel found
                     if self.trk[i, left_edge] == self.col_out:
                         outside_pixels.append([left_edge, i])
