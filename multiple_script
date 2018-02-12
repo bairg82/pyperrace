@@ -1,8 +1,8 @@
 #!/bin/bash
 
-ITERATIONS=5
+ITERATIONS=40
 
-name="pyperrace_teszt3"
+name="pyperrace_9"
 
 parentdir=$PWD
 
@@ -23,7 +23,7 @@ do
   echo "$i element"
   #value for individual jobs
   cd $parentdir
-  VALUE=$((ITERATIONS*i))
+  VALUE=$((1000*i))
   JOBDIR=$name"_"$i
   #create job working directory
   mkdir $JOBSDIR$name/$JOBDIR
@@ -37,7 +37,9 @@ do
 
   sed -i "s/\${i}/$i/"  multiplejobs.pbs
 
-  sed -i "s/\${VALUE}/1000/"  multiplejobs.pbs
+  sed -i "s/\${name}/$JOBDIR/"  multiplejobs.pbs
+
+  sed -i "s/\${VALUE}/$VALUE/"  multiplejobs.pbs
 
   qsub multiplejobs.pbs
 done

@@ -21,12 +21,16 @@ from random import randint
 from skimage.morphology import disk
 from skimage.color import rgb2gray
 from collections import deque
+import pickle
 
 class PaperRaceEnv:
     """ez az osztály biztosítja a tanuláshoz a környezetet"""
 
     def __init__(self, trk_pic_file, trk_col, gg_pic, sections, random_init, track_inside_color=None,):
+        # buffer a már lekért és kiszámolt referenciákra, hogy gyorsabb legyen a lekérés
+        self.ref_buffer = {}
 
+        # self.ref_buffer_load()
         # ha nincs megadva a pálya belsejének szín, akkor pirosra állítja
         # ez a rewardokat kiszámoló algoritmus működéséhez szükséges
         if track_inside_color is None:
@@ -108,7 +112,6 @@ class PaperRaceEnv:
         # ehhez van egy init, ami eloallitja a belso iv menten mert elorehaladast minden lepesben
         #self.ref_dist = self.__get_ref_dicts(self.ref_actions)
         self.ref_dist, self.ref_steps = self.__get_ref_dicts(self.ref_actions)
-
 
     def draw_track(self):
         # pálya kirajzolása
@@ -543,8 +546,10 @@ class PaperRaceEnv:
         Output:
         belso iv menten megtett ut,kulso iv menten megtett ut, belso iv referencia pontja, es kulso iv ref pontja"""
 
-        # TODO ezt lehet javítani azzal ha van egy lookup table is amiben eltároljuk a már kikeresett információt
-        # TODO így azt nem kell mindig költésgesen újra számolni
+        # ha a posiciot mar egyszer kiszamoltuk
+        if tuple(position) in self.ref_buffer:
+            curr_dist_in, pos_in, curr_dist_out, pos_out = self.ref_buffer[tuple(position)]
+            return curr_dist_in, pos_in, curr_dist_out, pos_out
 
         # az algoritmus működik, hogy az aktuális pozícióban egyre nagyobb négyzetet rajzol, aminek a pixelein végig
         # végig megy ezt addig csinálja amíg nem talál egyet és a talált pont távolságánál 2 szer nagyobb a szélesség
@@ -585,15 +590,15 @@ class PaperRaceEnv:
             if left_edge < 0:
                 left_edge_reached = True
                 left_edge = 0
-            if right_edge > self.trk.shape[1]:
+            if right_edge >= self.trk.shape[1]:
                 right_edge_reached = True
-                right_edge = self.trk.shape[1]
+                right_edge = self.trk.shape[1]- 1
             if top_edge < 0:
                 top_edge_reached = True
                 top_edge = 0
-            if bottom_edge > self.trk.shape[0]:
+            if bottom_edge >= self.trk.shape[0]:
                 bottom_edge_reached = True
-                bottom_edge = self.trk.shape[0]
+                bottom_edge = self.trk.shape[0] - 1
 
             # all edge is reached search is terminated
             if (left_edge_reached and right_edge_reached and top_edge_reached and bottom_edge_reached):
@@ -681,8 +686,20 @@ class PaperRaceEnv:
             pos_fel = pos_out + (pos_in - pos_out) * 0.5 #rnd.uniform(0.4, 0.6)
             curr_dist_in, pos_in, curr_dist_out, pos_out = self.get_ref(pos_fel)
 
+        # rakjuk el a bufferba
+        self.ref_buffer[tuple(position)] = [curr_dist_in, pos_in, curr_dist_out, pos_out]
+
         return curr_dist_in, pos_in, curr_dist_out, pos_out
 
+    def ref_buffer_save(self):
+        # save your data to a json file
+        with open('position_buffer_h1.json', 'w') as f:
+            np.save(self.ref_buffer, f)
+
+    def ref_buffer_load(self):
+        # json file can easily be read using other languages as well
+        with open('position_buffer_h1.json', 'rb') as f:
+            self.ref_buffer = pickle.load(f)
     """
     def get_reward(self, pos_old, pos_new, step_nr):
         ""Reard ado fuggveny. Egy adott lepeshez (pos_old - pos new) ad jutalmat. Eredetileg az volt hogy -1 azaz mint
@@ -935,3 +952,7 @@ class PaperRaceEnv:
             dist_dict_out[tuple(point)] = dist # a pontot belerakjuk a dictionarybe
 
         return dist_dict_out
+
+    def clean(self):
+        self.ref_buffer_save()
+        del self.ref_buffer

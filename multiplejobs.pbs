@@ -1,8 +1,8 @@
 #jobname
-#PBS -N ${name}_1
+#PBS -N ${name}
 
 #max runtime
-#PBS -l walltime=01:01:00:00
+#PBS -l walltime=05:01:00:00
 
 #resources: node->server(max 5), ppn->cpu core per server (max 24), gpus-> (max 2)
 ##PBS -l nodes=1:ppn=24:gpus=1:default
@@ -13,7 +13,7 @@
 
 #further examples for resourse
 #1 node 1 core (max 120)
-#PBS -l nodes=1:ppn=24
+#PBS -l nodes=1:ppn=1
 
 #1 node 24 core 2 gpu this is the maximum for servers
 ##PBS -l nodes=1:ppn=24:gpus=2:default
@@ -117,6 +117,6 @@ source activate Ehak_gpu
 #else
 #    python ddpg.py --max-episodes=1000 > python_out_$PBS_JOBID.txt
 
-python ddpg.py --max-episodes=1000 > python_out_$PBS_JOBID.txt
+python ddpg.py --max-episodes=${VALUE} > python_out_$PBS_JOBID.txt
 
 echo 'Everything is done!'

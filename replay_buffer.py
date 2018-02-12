@@ -61,7 +61,7 @@ class ReplayBuffer(object):
 
         # save all
         if policy == 'all':
-            batch = [_[0] for _ in self.buffer]
+            batch = self.buffer
 
         # save only best, number
         # if policy = 'best'

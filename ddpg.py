@@ -622,12 +622,15 @@ def main(args):
         # Initialize replay memory
         replay_buffer = ReplayBuffer(int(args['buffer_size']), int(args['random_seed']), args['experience_dir'])
 
+        replay_buffer.load()
+
         train(sess, env, args, actor, critic, actor_noise, replay_buffer)
 
         replay_buffer.save()
 
         #cleaning
         replay_buffer.clear()
+        env.clean()
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='provide arguments for DDPG agent')
@@ -643,7 +646,7 @@ if __name__ == '__main__':
     # run parameters
     parser.add_argument('--env', help='choose the gym env- tested on {Pendulum-v0}', default='pyperrace')
     parser.add_argument('--random-seed', help='random seed for repeatability', default=12131)
-    parser.add_argument('--max-episodes', help='max num of episodes to do while training', default=100)
+    parser.add_argument('--max-episodes', help='max num of episodes to do while training', default=2)
     parser.add_argument('--max-episode-len', help='max length of 1 episode', default=40)
     parser.add_argument('--render-env', help='render the gym env', action='store_true')
     parser.add_argument('--use-gym-monitor', help='record gym results', action='store_true')
