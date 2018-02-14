@@ -15,13 +15,13 @@ if use_matplotlib:
 
 import matplotlib.image as mpimg
 import numpy as np
-import random as rnd
-from numpy import linalg as LA
+
 from random import randint
 from skimage.morphology import disk
 from skimage.color import rgb2gray
-from collections import deque
-import pickle
+from math import sqrt
+
+import deepdish as dd
 
 class PaperRaceEnv:
     """ez az osztály biztosítja a tanuláshoz a környezetet"""
@@ -113,11 +113,13 @@ class PaperRaceEnv:
         #self.ref_dist = self.__get_ref_dicts(self.ref_actions)
         self.ref_dist, self.ref_steps = self.__get_ref_dicts(self.ref_actions)
 
+    # it draws the track to a current plot
     def draw_track(self):
         # pálya kirajzolása
         if use_matplotlib:
             plt.imshow(self.trk_pic)
 
+    # it draws all section from self section
     def draw_sections(self):
         # Szakaszok kirajzolása
         for i in range(len(self.sections)):
@@ -125,19 +127,27 @@ class PaperRaceEnv:
                 Y = np.array([self.sections[i][1], self.sections[i][3]])
                 self.draw_section(X, Y, color='blue')
 
+    # it clears current plot
     def draw_clear(self):
         if use_matplotlib:
             plt.clf()
 
+    # it draws a section to current plot
     def draw_section(self, X, Y, color):
         if use_matplotlib:
             plt.plot(X, Y, color=color)
             plt.pause(0.001)
             plt.draw()
 
+    # save current figure to file
     def draw_save(self, path = './img/', name = 'figure', count = '', extension = '.png'):
         if use_matplotlib:
             plt.savefig(path + name + count + extension)
+
+    # draw info to current plot
+    def draw_info(self, reward):
+        if use_matplotlib:
+                plt.text(1300, 1500, 'reward:' + str(reward))
 
     def step(self, spd_chn, spd_old, pos_old, draw, color):
 
@@ -610,11 +620,11 @@ class PaperRaceEnv:
                     # inside colored pixel found
                     if self.trk[i, left_edge] == self.col_in:
                         inside_pixels.append([left_edge, i])
-                        inside_pixel_distances.append(np.sqrt((left_edge - position[0])**2 + (i - position[1])**2))
+                        inside_pixel_distances.append(sqrt((left_edge - position[0])**2 + (i - position[1])**2))
                     # outside colored pixel found
                     if self.trk[i, left_edge] == self.col_out:
                         outside_pixels.append([left_edge, i])
-                        outside_pixel_distances.append(np.sqrt((left_edge - position[0])**2 + (i - position[1])**2))
+                        outside_pixel_distances.append(sqrt((left_edge - position[0])**2 + (i - position[1])**2))
 
             # right edge pixel column
             if not right_edge_reached:
@@ -622,11 +632,11 @@ class PaperRaceEnv:
                     # inside colored pixel found
                     if self.trk[i, right_edge] == self.col_in:
                         inside_pixels.append([right_edge, i])
-                        inside_pixel_distances.append(np.sqrt((right_edge - position[0])**2 + (i - position[1])**2))
+                        inside_pixel_distances.append(sqrt((right_edge - position[0])**2 + (i - position[1])**2))
                     # outside colored pixel found
                     if self.trk[i, right_edge] == self.col_out:
                         outside_pixels.append([right_edge, i])
-                        outside_pixel_distances.append(np.sqrt((right_edge - position[0])**2 + (i - position[1])**2))
+                        outside_pixel_distances.append(sqrt((right_edge - position[0])**2 + (i - position[1])**2))
 
             # top edge pixel row
             if not top_edge_reached:
@@ -634,11 +644,11 @@ class PaperRaceEnv:
                     # inside colored pixel found
                     if self.trk[top_edge, i] == self.col_in:
                         inside_pixels.append([i, top_edge])
-                        inside_pixel_distances.append(np.sqrt((i - position[0])**2 + (top_edge - position[1])**2))
+                        inside_pixel_distances.append(sqrt((i - position[0])**2 + (top_edge - position[1])**2))
                     # outside colored pixel found
                     if self.trk[top_edge, i] == self.col_out:
                         outside_pixels.append([i, top_edge])
-                        outside_pixel_distances.append(np.sqrt((i - position[0])**2 + (top_edge - position[1])**2))
+                        outside_pixel_distances.append(sqrt((i - position[0])**2 + (top_edge - position[1])**2))
 
             # bottom edge pixel row
             if not bottom_edge_reached:
@@ -646,11 +656,11 @@ class PaperRaceEnv:
                     # inside colored pixel found
                     if self.trk[bottom_edge, i] == self.col_in:
                         inside_pixels.append([i, bottom_edge])
-                        inside_pixel_distances.append(np.sqrt((i - position[0])**2 + (bottom_edge - position[1])**2))
+                        inside_pixel_distances.append(sqrt((i - position[0])**2 + (bottom_edge - position[1])**2))
                     # outside colored pixel found
                     if self.trk[bottom_edge, i] == self.col_out:
                         outside_pixels.append([i, bottom_edge])
-                        outside_pixel_distances.append(np.sqrt((i - position[0])**2 + (bottom_edge - position[1])**2))
+                        outside_pixel_distances.append(sqrt((i - position[0])**2 + (bottom_edge - position[1])**2))
 
             # all pixels investigated on perimeter
 
@@ -693,8 +703,12 @@ class PaperRaceEnv:
 
     def ref_buffer_save(self):
         # save your data to a json file
-        with open('position_buffer_h1.json', 'w') as f:
-            np.save(self.ref_buffer, f)
+        #with open('position_buffer_h1.json', 'w') as f:
+        #   np.save(self.ref_buffer, f)
+        d = {(210, 135): [27, [213, 197], 15, [213, 69]], (366.0, 117.0): [199, [366, 192], 187, [366, 64]]}
+        dd.io.save('test.h5', d)
+        a = dd.io.load('test.h5')
+        print(a)
 
     def ref_buffer_load(self):
         # json file can easily be read using other languages as well

@@ -541,16 +541,18 @@ def train(sess, env, args, actor, critic, actor_noise, replay_buffer):
                 writer.add_summary(summary_str, i)
                 writer.flush()
 
-                if draw_where['file']:
-                    env.draw_save(name='e', count=str(i))
-
-                print('| Reward: {:.3f} | Episode: {:d} | Qmax: {:.4f}'.format(ep_reward, i, (ep_ave_max_q / float(j))))
-
                 break
+            # end of if terminal
+        # end of steps
+        print('| Reward: {:.3f} | Episode: {:d} | Qmax: {:.4f}'.format(ep_reward, i, (ep_ave_max_q / float(j))))
 
         # minden századik epizód után legyen mentés
         if i % 100 == 0:
             saver.save(sess, args['network_dir'] + '/full_network_e' + str(i) + '.tfl')
+            if draw_where['file']:
+                env.draw_save(name='e', count=str(i))
+
+
 def main(args):
     with tf.Session() as sess:
 

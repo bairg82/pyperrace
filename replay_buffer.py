@@ -86,11 +86,6 @@ class ReplayBuffer(object):
         # loading experience from file
         try:
             npzfile = np.load(file)
-        except:
-            # do nothing
-            pass
-
-        if npzfile != None:
             s = npzfile['s']
             a = npzfile['a']
             r = npzfile['r']
@@ -102,6 +97,9 @@ class ReplayBuffer(object):
             for i in range(len(s)):
                 self.add(s[i], a[i], r[i], t[i], s2[i])
                 added += 1
+        except:
+            # do nothing
+            pass
 
         return added
 
