@@ -103,7 +103,7 @@ class PaperRaceEnv:
         #                              90, -90, 90, -140, 90, 110, 90, 120, 120, 120, 120, 100, -20, -10, 0, 0, 0, 0])
 
         # h1.bmp-hez:
-        self.ref_actions = np.array([70,-70,0,-180,-180,-180,-165,-150,-140,-120,-110,-100,-90,-90,-80,-80,-80,-80,-40,-40,-30,-20,-20,-20,-20,-20,-10])
+        self.ref_actions = np.array([70,-70,0,-180,-180,-180,-165,-150,-140,-120,-110,-100,-90,-90,-80,-80,-80,-80,-40,-40,-30,-30,-20,-20,-20,-20,-10])
 
         # ehhez van egy init, ami eloallitja a belso iv menten mert elorehaladast minden lepesben
         #self.ref_dist = self.__get_ref_dicts(self.ref_actions)
