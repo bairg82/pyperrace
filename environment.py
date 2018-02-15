@@ -21,7 +21,7 @@ from skimage.morphology import disk
 from skimage.color import rgb2gray
 from math import sqrt
 
-import deepdish as dd
+import pickle
 
 class PaperRaceEnv:
     """ez az osztály biztosítja a tanuláshoz a környezetet"""
@@ -29,7 +29,7 @@ class PaperRaceEnv:
     def __init__(self, trk_pic_file, trk_col, gg_pic, sections, random_init, track_inside_color=None,):
         # buffer a már lekért és kiszámolt referenciákra, hogy gyorsabb legyen a lekérés
         self.ref_buffer = {}
-
+        self.ref_buffer_load()
         # self.ref_buffer_load()
         # ha nincs megadva a pálya belsejének szín, akkor pirosra állítja
         # ez a rewardokat kiszámoló algoritmus működéséhez szükséges
@@ -702,18 +702,26 @@ class PaperRaceEnv:
         return curr_dist_in, pos_in, curr_dist_out, pos_out
 
     def ref_buffer_save(self):
-        # save your data to a json file
-        #with open('position_buffer_h1.json', 'w') as f:
-        #   np.save(self.ref_buffer, f)
-        d = {(210, 135): [27, [213, 197], 15, [213, 69]], (366.0, 117.0): [199, [366, 192], 187, [366, 64]]}
-        dd.io.save('test.h5', d)
-        a = dd.io.load('test.h5')
-        print(a)
+
+        file = open("env_ref_buffer_1", "wb")
+        for key, value in self.ref_buffer.items():
+            pickle.dump([key[0], key[1], value[0], value[1][0],value[1][1], value[2], value[3][0], value[3][1]], file)
+        file.close()
+
 
     def ref_buffer_load(self):
-        # json file can easily be read using other languages as well
-        with open('position_buffer_h1.json', 'rb') as f:
-            self.ref_buffer = pickle.load(f)
+        try:
+            with open('env_ref_buffer_1', 'rb') as file:
+                while True:
+                    obj = pickle.load(file)
+                    if (not obj):
+                        break
+                    key = [obj[0], obj[1]]
+                    value = [obj[2], [obj[3], obj[4]], obj[5], [obj[6], obj[7]]]
+                    self.ref_buffer[tuple(key)] = value
+        except:
+            # no ref buffer
+            pass
     """
     def get_reward(self, pos_old, pos_new, step_nr):
         ""Reard ado fuggveny. Egy adott lepeshez (pos_old - pos new) ad jutalmat. Eredetileg az volt hogy -1 azaz mint

@@ -377,6 +377,8 @@ def train(sess, env, args, actor, critic, actor_noise, replay_buffer):
     rand_ep_for_exp2 = range(int(0.01 * int(args['max_episodes'])), int(0.011 * int(args['max_episodes'])))
     rand_ep_for_exp3 = range(int(0.012 * int(args['max_episodes'])), int(0.013 * int(args['max_episodes'])))
 
+    # Jani véletlenszerű lépés tanulás közben arány
+    rand_stp_normal = 0.1
     # a minimum random amivel a teljes tanulas alatt neha random lep, megha mar a vegen is vagyunk:
     rand_stp_min = 0.001
 
@@ -440,7 +442,7 @@ def train(sess, env, args, actor, critic, actor_noise, replay_buffer):
             # Az egy dolog hogy az elejen van egy darabig total random lepkedes, de utana is van hogy neha randomlep
             # Minnnel kesobb jarunk a tanulanal, annal kisebb valoszinuseggel. Eleinte meg naaagy valoszinuseggel.
             # Tovabab ugyanitt kezelve hogy mikor lejar a csokkeno valoszinusegu resz utana is meg neha rand legyen
-            if (rnd.uniform(0, 1) < rand_stp_for_exp) or (rnd.uniform(0, 1) < rand_stp_min):
+            if (rnd.uniform(0, 1) < rand_stp_normal):
                 rand_step = True
 
 
@@ -460,17 +462,22 @@ def train(sess, env, args, actor, critic, actor_noise, replay_buffer):
                         a = int(rnd.uniform(-180, 180))
                         print("\033[92m {}\033[00m".format("        -------uni rand action:"), a)
 
-
             # A tanulasra szant epizodok soran nem sak az elejen hanem kesobb is legyen egy kis "belezavaras"
-            elif (i in rand_ep_for_exp2) or (i in rand_ep_for_exp3): # or rand_step2:
-                if j < env.ref_actions.size:
-                    a = int(rnd.uniform(-180, 180))
-                    #a = int(np.random.normal(env.ref_actions[j], 120, size=1))
-                    print("\033[94m {}\033[00m".format("        -------Rnd2 RndUni action:"), a)
-                else:
-                    a = int(actor.predict(np.reshape(s, (1, actor.state_dim))))
-                    print("\033[94m {}\033[00m".format("        -------Rnd2 Net action:"), a)
-                # ha semmifeltetel a fentiekbol nem teljesul, akkor meg a halo altal mondott lepest lepjuk
+            #"""
+            #elif (i in rand_ep_for_exp2) or (i in rand_ep_for_exp3): # or rand_step2:
+             #   if j < env.ref_actions.size:
+             #       a = int(rnd.uniform(-180, 180))
+            # x       #a = int(np.random.normal(env.ref_actions[j], 120, size=1))
+             ##       print("\033[94m {}\033[00m".format("        -------Rnd2 RndUni action:"), a)
+             #   else:
+             #       a = int(actor.predict(np.reshape(s, (1, actor.state_dim))))
+            #        print("\033[94m {}\033[00m".format("        -------Rnd2 Net action:"), a)
+            #    # ha semmifeltetel a fentiekbol nem teljesul, akkor meg a halo altal mondott lepest lepjuk
+            #"""
+            # Jani random lépés
+            elif (rand_step is True):
+                a = int(rnd.uniform(-180, 180))
+                print("\033[94m {}\033[00m".format("        -------full random action:"), a)
             else:
                 a = int(actor.predict(np.reshape(s, (1, actor.state_dim))) + 0 * actor_noise()) + int(
                     np.random.randint(-3, 3, size=1))
@@ -648,7 +655,7 @@ if __name__ == '__main__':
     # run parameters
     parser.add_argument('--env', help='choose the gym env- tested on {Pendulum-v0}', default='pyperrace')
     parser.add_argument('--random-seed', help='random seed for repeatability', default=12131)
-    parser.add_argument('--max-episodes', help='max num of episodes to do while training', default=2)
+    parser.add_argument('--max-episodes', help='max num of episodes to do while training', default=10)
     parser.add_argument('--max-episode-len', help='max length of 1 episode', default=40)
     parser.add_argument('--render-env', help='render the gym env', action='store_true')
     parser.add_argument('--use-gym-monitor', help='record gym results', action='store_true')
