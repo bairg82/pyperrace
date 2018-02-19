@@ -12,7 +12,7 @@ import numpy as np
 
 class ReplayBuffer(object):
 
-    def __init__(self, buffer_size, random_seed=123, save_dir = './experience/'):
+    def __init__(self, buffer_size, random_seed=123, save_dir = './experience', save_name = 'experience.npz'):
         """
         The right side of the deque contains the most recent experiences
         """
@@ -20,6 +20,7 @@ class ReplayBuffer(object):
         self.count = 0
         self.buffer = deque()
         self.save_dir = save_dir
+        self.save_name = save_name
         random.seed(random_seed)
 
     def add(self, s, a, r, t, s2):
@@ -75,17 +76,21 @@ class ReplayBuffer(object):
         s2_batch = np.array([_[4] for _ in batch])
 
         # save to file
-        np.savez((self.save_dir+'/experience.npz'), s=s_batch, a=a_batch, r=r_batch, t=t_batch, s2=s2_batch,)
+        np.savez((self.save_dir+'/'+self.save_name), s=s_batch, a=a_batch, r=r_batch, t=t_batch, s2=s2_batch,)
 
-    def load(self, file='./experience/tf_ddpg/experience.npz'):
+    def load(self, load_file='experience.npz', load_all = 'False'):
         # based on this:
         # https://docs.scipy.org/doc/numpy-1.13.0/reference/generated/numpy.savez.html#numpy.savez
 
         added = 0
 
+        if load_all == 'True':
+            # load all files from directory
+            # TODO load all files to experience
+            loaded_files = 1
         # loading experience from file
         try:
-            npzfile = np.load(file)
+            npzfile = np.load(self.load_dir + '/' + load_file)
             s = npzfile['s']
             a = npzfile['a']
             r = npzfile['r']

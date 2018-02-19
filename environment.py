@@ -27,10 +27,22 @@ import pickle
 class PaperRaceEnv:
     """ez az osztály biztosítja a tanuláshoz a környezetet"""
 
-    def __init__(self, trk_pic_file, trk_col, gg_pic, sections, random_init, track_inside_color=None,):
+    def __init__(self, trk_pic_file, trk_col, gg_pic, sections, random_init, ref_buffer_load_dir, \
+                 track_inside_color=None, \
+                 save_env_ref_buffer_dir = './env_ref_buffer', \
+                 save_env_ref_buffer_name = 'env_ref_buffer_1', \
+                 load_env_ref_buffer='', \
+                 load_all_env_ref_buffer='False',):
+
         # buffer a már lekért és kiszámolt referenciákra, hogy gyorsabb legyen a lekérés
+        self.ref_buffer_dir = save_env_ref_buffer_dir
+        self.ref_buffer_name = save_env_ref_buffer_name
+
+        # referencia buffer inicializalas
         self.ref_buffer = {}
-        self.ref_buffer_load()
+        self.ref_buffer_unsaved = 0
+        self.ref_buffer_load(load_env_ref_buffer, load_all_env_ref_buffer)
+
         # self.ref_buffer_load()
         # ha nincs megadva a pálya belsejének szín, akkor pirosra állítja
         # ez a rewardokat kiszámoló algoritmus működéséhez szükséges
@@ -712,20 +724,25 @@ class PaperRaceEnv:
 
         # rakjuk el a bufferba
         self.ref_buffer[tuple(position)] = [curr_dist_in, pos_in, curr_dist_out, pos_out]
-
+        self.ref_buffer_unsaved += 1
+        # save env ref buffer if 1000 new reference exists
+        if self.ref_buffer_unsaved = 1000:
+            self.ref_buffer_unsave = 0
+            self.ref_buffer_save()
         return curr_dist_in, pos_in, curr_dist_out, pos_out
 
     def ref_buffer_save(self):
 
-        file = open("env_ref_buffer_1", "wb")
+        file = open(self.ref_buffer_dir + '/' + self.ref_buffer_name, "wb")
         for key, value in self.ref_buffer.items():
             pickle.dump([key[0], key[1], value[0], value[1][0],value[1][1], value[2], value[3][0], value[3][1]], file)
         file.close()
 
 
-    def ref_buffer_load(self):
+    def ref_buffer_load(self, file_name='', load_all = 'False', load_all_dir = ''):
+        #TODO load all
         try:
-            with open('env_ref_buffer_1', 'rb') as file:
+            with open(file_name', 'rb') as file:
                 while True:
                     obj = pickle.load(file)
                     if (not obj):

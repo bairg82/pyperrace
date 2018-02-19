@@ -322,6 +322,7 @@ def build_summaries():
 # ===========================
 
 def train(sess, env, args, actor, critic, actor_noise, replay_buffer):
+    max_episodes = int(args['max_episodes'])
     # Set up summary Ops
     summary_ops, summary_vars = build_summaries()
 
@@ -356,7 +357,7 @@ def train(sess, env, args, actor, critic, actor_noise, replay_buffer):
     # draws = 100
 
     # draw_config = 'maxdrawsx'
-    # draws_per_fullepisodes = max(1, int(args['max_episodes']) / draws_per_fullepisodes)
+    # draws_per_fullepisodes = max(1, max_episodes / draws_per_fullepisodes)
 
     # draws_config = 'drawnothing'
     # draws = 0
@@ -371,11 +372,11 @@ def train(sess, env, args, actor, critic, actor_noise, replay_buffer):
 
     # de eloszor is a tanitasra szant epizodok elso valahany %-aban nagyon random lepked. Ilyenkor meg nem is kene
     # tanulni, csak tolteni fel az exerience memoryt
-    rand_ep_for_exp = int(args['max_episodes']) * 0.02
+    rand_ep_for_exp = max_episodes * 0.02
 
     # egy masfele random baszakodas
-    rand_ep_for_exp2 = range(int(0.01 * int(args['max_episodes'])), int(0.011 * int(args['max_episodes'])))
-    rand_ep_for_exp3 = range(int(0.012 * int(args['max_episodes'])), int(0.013 * int(args['max_episodes'])))
+    rand_ep_for_exp2 = range(int(0.01 * max_episodes), int(0.011 * max_episodes))
+    rand_ep_for_exp3 = range(int(0.012 * max_episodes), int(0.013 * max_episodes))
 
     # Jani véletlenszerű lépés tanulás közben arány
     rand_stp_normal = 0.1
@@ -386,7 +387,7 @@ def train(sess, env, args, actor, critic, actor_noise, replay_buffer):
     # Indul egy epizod:
     # ====================
 
-    for i in range(int(args['max_episodes'])):
+    for i in range(max_episodes):
         # alapállapotba hozzuk a környezetet
         env.reset()
 
@@ -427,11 +428,11 @@ def train(sess, env, args, actor, critic, actor_noise, replay_buffer):
         #print("Random Episode2:", rand_episode2)
 
         # aztan kesobb, az epizodok elorehaladtaval, csokkeno valoszinuseggel, random lepesek
-        rand_stp_for_exp = (int(args['max_episodes']) - (100 * i)) / int(args['max_episodes'])
+        rand_stp_for_exp = (max_episodes - (100 * i)) / max_episodes
         print("Random Step", rand_stp_for_exp)
 
         #ennyiedik leestol kezdve random lesz a lepes:
-        lepestol = rnd.uniform(0, env.ref_actions.size * (100*i) / int(args['max_episodes']))
+        lepestol = rnd.uniform(0, env.ref_actions.size * (100*i) / max_episodes)
 
         #egy egy epizódon belül ennyi lépés van maximum:
         for j in range(int(args['max_episode_len'])):
@@ -557,6 +558,8 @@ def train(sess, env, args, actor, critic, actor_noise, replay_buffer):
         # minden századik epizód után legyen mentés
         if i % 100 == 0:
             saver.save(sess, args['network_dir'] + '/full_network_e' + str(i) + '.tfl')
+        # minden x epizód után legyen kép mentés
+        if i % 5 == 0:
             if draw_where['file']:
                 env.draw_save(name='e', count=str(i))
 
@@ -601,7 +604,11 @@ def main(args):
         # Gergo
         sections = np.array([[200, 220, 200, 50],  # [333, 125, 333, 64],[394, 157, 440, 102],
                              [200, 1250, 250, 1400]])
-        env = PaperRaceEnv('h1.bmp', trk_col, 'GG1.bmp', sections, random_init=False)
+        env = PaperRaceEnv('h1.bmp', trk_col, 'GG1.bmp', sections, random_init=False, \
+                           save_env_ref_buffer_dir=args['save_env_ref_buffer_dir'],\
+                           save_env_ref_buffer_name=args['save_env_ref_buffer_name'],\
+                           load_env_ref_buffer=args['load_env_ref_buffer'],\
+                           load_all_env_ref_buffer=args['load_all_env_ref_buffer_dir'])
 
         np.random.seed(int(args['random_seed']))
         tf.set_random_seed(int(args['random_seed']))
@@ -630,9 +637,12 @@ def main(args):
         print("actor noise created")
 
         # Initialize replay memory
-        replay_buffer = ReplayBuffer(int(args['buffer_size']), int(args['random_seed']), args['experience_dir'])
+        replay_buffer = ReplayBuffer(buffer_size = int(args['buffer_size']), \
+                                     random_seed = int(args['random_seed']), \
+                                     save_dir = args['experience_dir'],
+                                     save_name = args['experience_name'])
 
-        replay_buffer.load()
+        replay_buffer.load(load_file=args['load_env_ref_buffer'], args['load_all_env_ref_buffer'])
 
         train(sess, env, args, actor, critic, actor_noise, replay_buffer)
 
@@ -658,13 +668,15 @@ if __name__ == '__main__':
     parser.add_argument('--random-seed', help='random seed for repeatability', default=12131)
     parser.add_argument('--max-episodes', help='max num of episodes to do while training', default=10)
     parser.add_argument('--max-episode-len', help='max length of 1 episode', default=40)
-    parser.add_argument('--render-env', help='render the gym env', action='store_true')
-    parser.add_argument('--use-gym-monitor', help='record gym results', action='store_true')
-    parser.add_argument('--monitor-dir', help='directory for storing gym results', default='./results/gym_ddpg')
-    parser.add_argument('--summary-dir', help='directory for storing tensorboard info', default='./results/tf_ddpg')
-    parser.add_argument('--experience-dir', help='directory for experiences', default='./experience/tf_ddpg')
-    parser.add_argument('--load-experince', help='loading experience setting', default='./experience/tf_ddpg/experience.npz')
-    parser.add_argument('--network-dir', help='saving networks to this folder', default='./network/tf_ddpg')
+    parser.add_argument('--summary-dir', help='directory for storing tensorboard info', default='./results')
+    parser.add_argument('--experience-dir', help='directory for experiences', default='./experience')
+    parser.add_argument('--experience-name', help='name for experience file', default='experience.npz')
+    parser.add_argument('--load-experince', help='loading experience setting', default='./experience/experience.npz')
+    parser.add_argument('--network-dir', help='saving networks to this folder', default='./network')
+    parser.add_argument('--save-env-ref-buffer-dir', help='saving and loading ref buffer from this dir', default='./env_ref_buffer')
+    parser.add_argument('--save-env-ref-buffer-name', help='saving and loading ref buffer from this dir', default='env_ref_buffer_1')
+    parser.add_argument('--load-env-ref-buffer', help='load env buffer  from this folder', default='./env_ref_buffer/env_ref_buffer_1')
+    parser.add_argument('--load-all-env-ref-buffer', help='saving networks to this folder', default='False')
 
 
     parser.set_defaults(render_env=True)
