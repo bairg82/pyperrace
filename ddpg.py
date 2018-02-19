@@ -450,11 +450,12 @@ def train(sess, env, args, actor, critic, actor_noise, replay_buffer):
             # Ha az adott felteltel teljesult korabban, es most egy random epizodban vagyunk, vagy nem random az epizod,
             # de a lepes random, na akkor randomot lepunk:
             if i < rand_ep_for_exp:
+
                 if (lepestol < j) and (j < env.ref_actions.size):
                     a = int(np.random.normal(env.ref_actions[j], 20, size=1))
 
                     print("\033[94m {}\033[00m".format("        -------ref norm rand action:"), a)
-                else:
+                else:#hanyadik lepestol lepunk random: (hogy az elejen meg lehetoleg a referenciat lepje)
                     if j < env.ref_actions.size:
                         a = env.ref_actions[j] # int(actor.predict(np.reshape(s, (1, actor.state_dim))))
                         print("\033[93m {}\033[00m" .format("        -------ref action:"), a)

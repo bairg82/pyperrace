@@ -15,7 +15,8 @@ if use_matplotlib:
 
 import matplotlib.image as mpimg
 import numpy as np
-
+import random as rnd
+from numpy import linalg as LA
 from random import randint
 from skimage.morphology import disk
 from skimage.color import rgb2gray
@@ -107,7 +108,20 @@ class PaperRaceEnv:
         #                              90, -90, 90, -140, 90, 110, 90, 120, 120, 120, 120, 100, -20, -10, 0, 0, 0, 0])
 
         # h1.bmp-hez:
-        self.ref_actions = np.array([70,-70,0,-180,-180,-180,-165,-150,-140,-120,-110,-100,-90,-90,-80,-80,-80,-80,-40,-40,-30,-30,-20,-20,-20,-20,-10])
+        # #ember által lejátszott lépések: (
+        hum_act = (
+        [70, -70, 0, -180, -180, -180, -165, -150, -140, -120, -110, -100, -90, -90, -80, -80, -80, -80, -40, -40, -30,
+         -30, -20, -20, -20, -20, -10], \
+        [90, -90, -50, 100, -180, -180, -180, -160, -150, -140, -110, -100, -90, -90, -80, -70, -70, -70, -60, -40, -20,
+         -20, -20, -20, -10, -10, -10], \
+        [-90, 90, 50, -100, -180, -180, -180, -160, -150, -140, -110, -100, -90, -90, -80, -70, -70, -70, -40, -30, -20,
+         -20, -20, -20, -20, -20], \
+        [70, -70, 0, -180, -180, -180, -165, -155, -150, -130, -110, -100, -90, -90, -80, -70, -60, -60, -40, -40, -30,
+         -20, -20, -20, -20, -20], \
+        [90, -40, -10, -180, -180, -180, -175, -165, -150, -120, -100, -90, -70, -70, -70, -70, -70, -70, -70, -60, -50,
+         -40, -40, -30, -30, -20])
+
+        self.ref_actions = np.array(hum_act[0])
 
         # ehhez van egy init, ami eloallitja a belso iv menten mert elorehaladast minden lepesben
         #self.ref_dist = self.__get_ref_dicts(self.ref_actions)
