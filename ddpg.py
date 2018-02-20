@@ -98,9 +98,15 @@ class ActorNetwork(object):
             net1 = tflearn.fully_connected(inputs, 400, name='actor_fc1')
             net2 = tflearn.layers.normalization.batch_normalization(net1, name='actor_norm1')
             net3 = tflearn.activations.relu(net2)
-            net4 = tflearn.fully_connected(net3, 300, name='actor_fc2')
+            net4 = tflearn.fully_connected(net3, 100, name='actor_fc2')
             net5 = tflearn.layers.normalization.batch_normalization(net4, name='actor_norm2')
             net6 = tflearn.activations.relu(net5)
+            net7 = tflearn.fully_connected(net6, 30, name='actor_fc3')
+            net8 = tflearn.layers.normalization.batch_normalization(net7, name='actor_norm3')
+            net9 = tflearn.activations.relu(net8)
+            net10 = tflearn.fully_connected(net9, 10, name='actor_fc4')
+            net11 = tflearn.layers.normalization.batch_normalization(net10, name='actor_norm4')
+            net12 = tflearn.activations.relu(net11)
             """ 
             net = tflearn.fully_connected(net, 30)
             net = tflearn.layers.normalization.batch_normalization(net)
@@ -112,7 +118,7 @@ class ActorNetwork(object):
             # Final layer weights are init to Uniform[-3e-3, 3e-3]
             w_init = tflearn.initializations.uniform(minval=-0.003, maxval=0.003)
             out = tflearn.fully_connected(
-                net6, self.action_dim, activation='tanh', weights_init=w_init, name='actor_output')
+                net12, self.action_dim, activation='tanh', weights_init=w_init, name='actor_output')
             # Scale output to -action_bound to action_bound
 
             scaled_out = tf.multiply(out, self.action_bound)
@@ -207,19 +213,19 @@ class CriticNetwork(object):
     def create_critic_network(self, scope = 'critic'):
         with tf.name_scope(scope):
             inputs = tflearn.input_data(shape=[None, self.state_dim], name='critic_input')
-            net = tflearn.fully_connected(inputs, 400, name='critic_fc1')
+            net = tflearn.fully_connected(inputs, 300, name='critic_fc1')
             net = tflearn.layers.normalization.batch_normalization(net, name='critic_norm1')
             net = tflearn.activations.relu(net)
-            t1 = tflearn.fully_connected(net, 300, name='critic_fc2')
+            t1 = tflearn.fully_connected(net, 200, name='critic_fc2')
 
             # Add the action tensor in the 2nd hidden layer
             # Use two temp layers to get the corresponding weights and biases
             action = tflearn.input_data(shape=[None, self.action_dim], name='critic_action_input')
-            t2 = tflearn.fully_connected(action, 300, name='critic_norm2')
+            t2 = tflearn.fully_connected(action, 200, name='critic_norm2')
             add_t2 = tf.add(tf.matmul(action, t2.W), t2.b, name='critic_t2_add')
 
             net = tflearn.activation(tf.add(tf.matmul(net, t1.W), add_t2), activation='relu', name='critic_relu')
-            """
+
             net = tflearn.fully_connected(net, 90)
             net = tflearn.layers.normalization.batch_normalization(net)
             net = tflearn.activations.relu(net)
@@ -231,7 +237,7 @@ class CriticNetwork(object):
             net = tflearn.fully_connected(net, 20)
             net = tflearn.layers.normalization.batch_normalization(net)
             net = tflearn.activations.relu(net)
-            """
+
             # linear layer connected to 1 output representing Q(s,a)
             # Weights are init to Uniform[-3e-3, 3e-3]
             w_init = tflearn.initializations.uniform(minval=-0.003, maxval=0.003)
@@ -368,18 +374,18 @@ def train(sess, env, args, actor, critic, actor_noise, replay_buffer):
 
     # az emberi jatekokat bele kell "keverni" majd, mint experience. Hogy a teljes tanitásra szánt epizodok alatt
     # mikor, az a lenti matrixban dol el. Minden sor egy szakaszt jelöl, amiben exploration van:
-    ep_for_exp = np.array([[0, 0.010],
-                          [0.01, 0.015],
-                          [0.20, 0.207]]) * int(args['max_episodes'])
 
-    # egy masfele random baszakodas
-    # rand_ep_for_exp2 = range(int(0.01 * int(args['max_episodes'])), int(0.011 * int(args['max_episodes'])))
-    # rand_ep_for_exp3 = range(int(0.012 * int(args['max_episodes'])), int(0.013 * int(args['max_episodes'])))
+    ep_for_exp = np.array([0, 0.05,
+                           0.10, 0.15,
+                           0.20, 0.25]) * int(args['max_episodes'])
 
-    # Jani véletlenszerű lépés tanulás közben arány
+    # Minden sor szam pedig hogy abban a fentiekben megadott intervallumokban mennyiről mennyire csökkenjen a szórás.
+    sig_for_exp = np.array([30, 0,
+                            10, 5,
+                            15, 0])
+
+    #Jani véletlenszerű lépés tanulás közben arány
     rand_stp_normal = 0.001
-    # a minimum random amivel a teljes tanulas alatt neha random lep, megha mar a vegen is vagyunk:
-    rand_stp_min = 0.001
 
     # ====================
     # Indul egy epizod:
@@ -415,25 +421,21 @@ def train(sess, env, args, actor, critic, actor_noise, replay_buffer):
             env.draw_clear()
             env.draw_track()
 
-        # Exploration-joz: Ha mas nincs, ne veletlenszeruen lepkedjen
-        rand_episode = False
-        # random lesz egesz epizod, ha a tanulas elejen vagyunk:
-        #rand_episode2 = i < rand_ep_for_exp
-        #print("Random Episode")
-        # !: később intézve hogy ilyenkor ne tanuljon, csak töltse a memoryt
-
-        #rand_episode = (i in rand_ep_for_exp2) or (i in rand_ep_for_exp3)
-        #print("Random Episode2:", rand_episode2)
-
+        """
         # aztan kesobb, az epizodok elorehaladtaval, csokkeno valoszinuseggel, random lepesek
         rand_stp_for_exp = (int(args['max_episodes']) - (100 * i)) / int(args['max_episodes'])
-        print("Random Step", rand_stp_for_exp)
-
+        print("Random Step: ", rand_stp_for_exp)
+        
         #ennyiedik leestol kezdve random lesz a lepes:
         lepestol = np.random.uniform(0, env.ref_actions.size * (100*i) / int(args['max_episodes']), 1)
+        """
+
 
         # az emberi lepessorok kozul valasszunk egyet veletlenszeruen mint aktualis epizod lepessor:
         curr_ref_actions = np.array(env.hum_act[int(np.random.uniform(0, int(len(env.hum_act)), 1))])
+
+        # a random lepesekhez a szoras:
+        szoras = np.interp(i, ep_for_exp, sig_for_exp)
 
         #egy egy epizódon belül ennyi lépés van maximum:
         for j in range(int(args['max_episode_len'])):
@@ -447,13 +449,24 @@ def train(sess, env, args, actor, critic, actor_noise, replay_buffer):
             if (np.random.uniform(0, 1, 1) < rand_stp_normal):
                 rand_step = True
 
-
             #Actionok:
             # Ha i (epizod) abban atartományban van amikor emberi lepes alapu random epizodot akarunk akkor:
-            if (i in range(int(ep_for_exp[0][0]), int(ep_for_exp[0][1]))) or (i in range(int(ep_for_exp[1][0]), int(ep_for_exp[1][1]))) or (i in range(int(ep_for_exp[2][0]), int(ep_for_exp[2][1]))):
+            rand_episode = (i in range(int(ep_for_exp[0]), int(ep_for_exp[1]))) or (
+                    i in range(int(ep_for_exp[2]), int(ep_for_exp[3]))) or (
+                    i in range(int(ep_for_exp[4]), int(ep_for_exp[5])))
+            if rand_episode:
+                # ha nem ért még véget az epizod, de mar a ref lepessor vege, akkor random lepkedunk
+                if j < curr_ref_actions.size:
+                    a = int(np.random.normal(curr_ref_actions[j], szoras, 1))  # int(actor.predict(np.reshape(s, (1, actor.state_dim))))
+                    print("\033[93m {}\033[00m".format("        -------ref action:"), a)
+                else:
+                    a = int(np.random.uniform(-180, 180, 1))
+                    print("\033[92m {}\033[00m".format("        -------uni rand action:"), a)
+
+                """
                  # a referencia lepessortol elterunk ha az aktualis lepes a kivant tartomanyba esik az epizodon belul
                 if (lepestol < j) and (j < curr_ref_actions.size):
-                    a = int(np.random.normal(curr_ref_actions[j], 20, 1))
+                    a = int(np.random.normal(curr_ref_actions[j], 10, 1))
                     print("\033[94m {}\033[00m".format("        -------ref norm rand action:"), a)
                 else: # amugy az elejen meg a referenciat lepjuk
                     # ha nem ért még véget az epizod, de mar a ref lepessor vege, akkor random lepkedunk
@@ -463,7 +476,7 @@ def train(sess, env, args, actor, critic, actor_noise, replay_buffer):
                     else:
                         a = int(np.random.uniform(-180, 180, 1))
                         print("\033[92m {}\033[00m".format("        -------uni rand action:"), a)
-
+                """
 
             # Jani random lépés
             elif (rand_step is True):
@@ -472,7 +485,6 @@ def train(sess, env, args, actor, critic, actor_noise, replay_buffer):
             else:
                 a = int(actor.predict(np.reshape(s, (1, actor.state_dim))) + 0 * actor_noise()) + int(
                     np.random.randint(-3, 3, size=1))
-
                 print("Netwrk action:--------", a)
 
             a = max(min(a, 180), -180)
@@ -643,13 +655,13 @@ if __name__ == '__main__':
     parser.add_argument('--critic-lr', help='critic network learning rate', default=0.0001)
     parser.add_argument('--gamma', help='discount factor for critic updates', default=0.998)
     parser.add_argument('--tau', help='soft target update parameter', default=0.001)
-    parser.add_argument('--buffer-size', help='max size of the replay buffer', default=1500000)
+    parser.add_argument('--buffer-size', help='max size of the replay buffer', default=4000)
     parser.add_argument('--minibatch-size', help='size of minibatch for minibatch-SGD', default=32)
 
     # run parameters
     parser.add_argument('--env', help='choose the gym env- tested on {Pendulum-v0}', default='pyperrace')
     parser.add_argument('--random-seed', help='random seed for repeatability', default=12131)
-    parser.add_argument('--max-episodes', help='max num of episodes to do while training', default=10000)
+    parser.add_argument('--max-episodes', help='max num of episodes to do while training', default=1000)
     parser.add_argument('--max-episode-len', help='max length of 1 episode', default=40)
     parser.add_argument('--render-env', help='render the gym env', action='store_true')
     parser.add_argument('--use-gym-monitor', help='record gym results', action='store_true')
