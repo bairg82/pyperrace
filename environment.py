@@ -32,7 +32,7 @@ class PaperRaceEnv:
                  save_env_ref_buffer_dir = './env_ref_buffer', \
                  save_env_ref_buffer_name = 'env_ref_buffer_1', \
                  load_env_ref_buffer='', \
-                 load_all_env_ref_buffer='False',):
+                 load_all_env_ref_buffer_dir='',):
 
         # buffer a már lekért és kiszámolt referenciákra, hogy gyorsabb legyen a lekérés
         self.ref_buffer_dir = save_env_ref_buffer_dir
@@ -41,7 +41,7 @@ class PaperRaceEnv:
         # referencia buffer inicializalas
         self.ref_buffer = {}
         self.ref_buffer_unsaved = 0
-        self.ref_buffer_load(load_env_ref_buffer, load_all_env_ref_buffer)
+        self.ref_buffer_load(load_env_ref_buffer, load_all_dir=load_all_env_ref_buffer_dir)
 
         # self.ref_buffer_load()
         # ha nincs megadva a pálya belsejének szín, akkor pirosra állítja
@@ -739,8 +739,19 @@ class PaperRaceEnv:
         file.close()
 
 
-    def ref_buffer_load(self, file_name='', load_all = 'False', load_all_dir = ''):
-        #TODO load all
+    def ref_buffer_load(self, file_name='', load_all_dir = ''):
+        try:
+            # no directory is specified then load file with exect path
+            if load_all_dir = '':
+                file = open(file_name,'rb')
+            # load all file in defined directory if specified
+            else:
+                for tmp_file_name in os.listdir(load_all_dir):
+                    self.ref_buffer_fill(tmp_file_name)
+        except:
+            print('wrong file name or directory')
+
+    def ref_buffer_fill(selfself, file_name):
         try:
             with open(file_name, 'rb') as file:
                 while True:

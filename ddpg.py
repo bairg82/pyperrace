@@ -608,7 +608,7 @@ def main(args):
                            save_env_ref_buffer_dir=args['save_env_ref_buffer_dir'],\
                            save_env_ref_buffer_name=args['save_env_ref_buffer_name'],\
                            load_env_ref_buffer=args['load_env_ref_buffer'],\
-                           load_all_env_ref_buffer=args['load_all_env_ref_buffer'])
+                           load_all_env_ref_buffer_dir=args['load_all_env_ref_buffer_dir'])
 
         np.random.seed(int(args['random_seed']))
         tf.set_random_seed(int(args['random_seed']))
@@ -677,7 +677,7 @@ if __name__ == '__main__':
     parser.add_argument('--save-env-ref-buffer-dir', help='saving and loading ref buffer from this dir', default='./env_ref_buffer')
     parser.add_argument('--save-env-ref-buffer-name', help='saving and loading ref buffer from this dir', default='env_ref_buffer_1')
     parser.add_argument('--load-env-ref-buffer', help='load env buffer  from this folder', default='./env_ref_buffer/env_ref_buffer_1')
-    parser.add_argument('--load-all-env-ref-buffer', help='saving networks to this folder', default='False')
+    parser.add_argument('--load-all-env-ref-buffer-dir', help='saving networks to this folder', default='')
     parser.add_argument('--save-graph-episodes', help='save graph in every x epides', default=1000)
     parser.add_argument('--save-image-episodes', help='save image in every x epides', default=5)
 
