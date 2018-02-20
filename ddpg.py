@@ -15,8 +15,8 @@ import os
 
 # OnHPC = True
 
-# used_device = '/gpu:0'
-used_device = '/cpu:0'
+used_device = '/gpu:0'
+# used_device = '/cpu:0'
 
 #import gym
 from environment import PaperRaceEnv
@@ -24,7 +24,7 @@ from environment import PaperRaceEnv
 import tflearn
 import argparse
 import pprint as pp
-import random as rnd
+
 
 from replay_buffer import ReplayBuffer
 
@@ -236,7 +236,7 @@ class CriticNetwork(object):
             # Weights are init to Uniform[-3e-3, 3e-3]
             w_init = tflearn.initializations.uniform(minval=-0.003, maxval=0.003)
             out = tflearn.fully_connected(net, 1, weights_init=w_init, name='critic_output')
-            self.model = model = tflearn.DNN(out)
+            # self.model = model = tflearn.DNN(out)
             return inputs, action, out
 
     def train(self, inputs, action, predicted_q_value):
@@ -366,24 +366,23 @@ def train(sess, env, args, actor, critic, actor_noise, replay_buffer):
 
     # ----------------------------
 
-    # A koncepcio az lesz hogy generalunk egy 0-1 kozotti szamot, aminel majd kell random szamnak kisebbnek kell
-    # lenni es akkor teljesul egy feltetel
-
-    # de eloszor is a tanitasra szant epizodok elso valahany %-aban nagyon random lepked. Ilyenkor meg nem is kene
-    # tanulni, csak tolteni fel az exerience memoryt
-    rand_ep_for_exp = int(args['max_episodes']) * 0.02
+    # az emberi jatekokat bele kell "keverni" majd, mint experience. Hogy a teljes tanitásra szánt epizodok alatt
+    # mikor, az a lenti matrixban dol el. Minden sor egy szakaszt jelöl, amiben exploration van:
+    ep_for_exp = np.array([[0, 0.010],
+                          [0.01, 0.015],
+                          [0.20, 0.207]]) * int(args['max_episodes'])
 
     # egy masfele random baszakodas
-    rand_ep_for_exp2 = range(int(0.01 * int(args['max_episodes'])), int(0.011 * int(args['max_episodes'])))
-    rand_ep_for_exp3 = range(int(0.012 * int(args['max_episodes'])), int(0.013 * int(args['max_episodes'])))
+    # rand_ep_for_exp2 = range(int(0.01 * int(args['max_episodes'])), int(0.011 * int(args['max_episodes'])))
+    # rand_ep_for_exp3 = range(int(0.012 * int(args['max_episodes'])), int(0.013 * int(args['max_episodes'])))
 
     # Jani véletlenszerű lépés tanulás közben arány
-    rand_stp_normal = 0.1
+    rand_stp_normal = 0.001
     # a minimum random amivel a teljes tanulas alatt neha random lep, megha mar a vegen is vagyunk:
     rand_stp_min = 0.001
 
     # ====================
-    # Indul egy epizod:regrgterg
+    # Indul egy epizod:
     # ====================
 
     for i in range(int(args['max_episodes'])):
@@ -431,7 +430,10 @@ def train(sess, env, args, actor, critic, actor_noise, replay_buffer):
         print("Random Step", rand_stp_for_exp)
 
         #ennyiedik leestol kezdve random lesz a lepes:
-        lepestol = rnd.uniform(0, env.ref_actions.size * (100*i) / int(args['max_episodes']))
+        lepestol = np.random.uniform(0, env.ref_actions.size * (100*i) / int(args['max_episodes']), 1)
+
+        # az emberi lepessorok kozul valasszunk egyet veletlenszeruen mint aktualis epizod lepessor:
+        curr_ref_actions = np.array(env.hum_act[int(np.random.uniform(0, int(len(env.hum_act)), 1))])
 
         #egy egy epizódon belül ennyi lépés van maximum:
         for j in range(int(args['max_episode_len'])):
@@ -442,42 +444,30 @@ def train(sess, env, args, actor, critic, actor_noise, replay_buffer):
             # Az egy dolog hogy az elejen van egy darabig total random lepkedes, de utana is van hogy neha randomlep
             # Minnnel kesobb jarunk a tanulanal, annal kisebb valoszinuseggel. Eleinte meg naaagy valoszinuseggel.
             # Tovabab ugyanitt kezelve hogy mikor lejar a csokkeno valoszinusegu resz utana is meg neha rand legyen
-            if (rnd.uniform(0, 1) < rand_stp_normal):
+            if (np.random.uniform(0, 1, 1) < rand_stp_normal):
                 rand_step = True
 
 
             #Actionok:
-            # Ha az adott felteltel teljesult korabban, es most egy random epizodban vagyunk, vagy nem random az epizod,
-            # de a lepes random, na akkor randomot lepunk:
-            if i < rand_ep_for_exp:
-
-                if (lepestol < j) and (j < env.ref_actions.size):
-                    a = int(np.random.normal(env.ref_actions[j], 20, size=1))
-
+            # Ha i (epizod) abban atartományban van amikor emberi lepes alapu random epizodot akarunk akkor:
+            if (i in range(int(ep_for_exp[0][0]), int(ep_for_exp[0][1]))) or (i in range(int(ep_for_exp[1][0]), int(ep_for_exp[1][1]))) or (i in range(int(ep_for_exp[2][0]), int(ep_for_exp[2][1]))):
+                 # a referencia lepessortol elterunk ha az aktualis lepes a kivant tartomanyba esik az epizodon belul
+                if (lepestol < j) and (j < curr_ref_actions.size):
+                    a = int(np.random.normal(curr_ref_actions[j], 20, 1))
                     print("\033[94m {}\033[00m".format("        -------ref norm rand action:"), a)
-                else:#hanyadik lepestol lepunk random: (hogy az elejen meg lehetoleg a referenciat lepje)
-                    if j < env.ref_actions.size:
-                        a = env.ref_actions[j] # int(actor.predict(np.reshape(s, (1, actor.state_dim))))
+                else: # amugy az elejen meg a referenciat lepjuk
+                    # ha nem ért még véget az epizod, de mar a ref lepessor vege, akkor random lepkedunk
+                    if j < curr_ref_actions.size:
+                        a = curr_ref_actions[j] # int(actor.predict(np.reshape(s, (1, actor.state_dim))))
                         print("\033[93m {}\033[00m" .format("        -------ref action:"), a)
                     else:
-                        a = int(rnd.uniform(-180, 180))
+                        a = int(np.random.uniform(-180, 180, 1))
                         print("\033[92m {}\033[00m".format("        -------uni rand action:"), a)
 
-            # A tanulasra szant epizodok soran nem sak az elejen hanem kesobb is legyen egy kis "belezavaras"
-            #"""
-            #elif (i in rand_ep_for_exp2) or (i in rand_ep_for_exp3): # or rand_step2:
-             #   if j < env.ref_actions.size:
-             #       a = int(rnd.uniform(-180, 180))
-            # x       #a = int(np.random.normal(env.ref_actions[j], 120, size=1))
-             ##       print("\033[94m {}\033[00m".format("        -------Rnd2 RndUni action:"), a)
-             #   else:
-             #       a = int(actor.predict(np.reshape(s, (1, actor.state_dim))))
-            #        print("\033[94m {}\033[00m".format("        -------Rnd2 Net action:"), a)
-            #    # ha semmifeltetel a fentiekbol nem teljesul, akkor meg a halo altal mondott lepest lepjuk
-            #"""
+
             # Jani random lépés
             elif (rand_step is True):
-                a = int(rnd.uniform(-180, 180))
+                a = int(np.random.uniform(-180, 180, 1))
                 print("\033[94m {}\033[00m".format("        -------full random action:"), a)
             else:
                 a = int(actor.predict(np.reshape(s, (1, actor.state_dim))) + 0 * actor_noise()) + int(
@@ -554,11 +544,14 @@ def train(sess, env, args, actor, critic, actor_noise, replay_buffer):
         # end of steps
         print('| Reward: {:.3f} | Episode: {:d} | Qmax: {:.4f}'.format(ep_reward, i, (ep_ave_max_q / float(j))))
 
-        # minden századik epizód után legyen mentés
-        if i % 100 == 0:
-            saver.save(sess, args['network_dir'] + '/full_network_e' + str(i) + '.tfl')
+        # minden valahanyadik epizód után legyen kép kimentés
+        if i % 1 == 0:
             if draw_where['file']:
                 env.draw_save(name='e', count=str(i))
+
+        # minden századik epizód után legyen háló mentés
+        #if i % 100 == 0:
+        #    saver.save(sess, args['network_dir'] + '/full_network_e' + str(i) + '.tfl')
 
 
 def main(args):
@@ -646,17 +639,17 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='provide arguments for DDPG agent')
 
     # agent parameters
-    parser.add_argument('--actor-lr', help='actor network learning rate',   default=0.00001)
-    parser.add_argument('--critic-lr', help='critic network learning rate', default=0.001)
+    parser.add_argument('--actor-lr', help='actor network learning rate',   default=0.000001)
+    parser.add_argument('--critic-lr', help='critic network learning rate', default=0.0001)
     parser.add_argument('--gamma', help='discount factor for critic updates', default=0.998)
     parser.add_argument('--tau', help='soft target update parameter', default=0.001)
     parser.add_argument('--buffer-size', help='max size of the replay buffer', default=1500000)
-    parser.add_argument('--minibatch-size', help='size of minibatch for minibatch-SGD', default=128)
+    parser.add_argument('--minibatch-size', help='size of minibatch for minibatch-SGD', default=32)
 
     # run parameters
     parser.add_argument('--env', help='choose the gym env- tested on {Pendulum-v0}', default='pyperrace')
     parser.add_argument('--random-seed', help='random seed for repeatability', default=12131)
-    parser.add_argument('--max-episodes', help='max num of episodes to do while training', default=10)
+    parser.add_argument('--max-episodes', help='max num of episodes to do while training', default=10000)
     parser.add_argument('--max-episode-len', help='max length of 1 episode', default=40)
     parser.add_argument('--render-env', help='render the gym env', action='store_true')
     parser.add_argument('--use-gym-monitor', help='record gym results', action='store_true')
