@@ -556,10 +556,10 @@ def train(sess, env, args, actor, critic, actor_noise, replay_buffer):
         print('| Reward: {:.3f} | Episode: {:d} | Qmax: {:.4f}'.format(ep_reward, i, (ep_ave_max_q / float(j))))
 
         # minden századik epizód után legyen mentés
-        if i % 100 == 0:
+        if i % args['save_graph_episodes'] == 0:
             saver.save(sess, args['network_dir'] + '/full_network_e' + str(i) + '.tfl')
         # minden x epizód után legyen kép mentés
-        if i % 5 == 0:
+        if i % args['save_image_episodes'] == 0:
             if draw_where['file']:
                 env.draw_save(name='e', count=str(i))
 
@@ -678,6 +678,8 @@ if __name__ == '__main__':
     parser.add_argument('--save-env-ref-buffer-name', help='saving and loading ref buffer from this dir', default='env_ref_buffer_1')
     parser.add_argument('--load-env-ref-buffer', help='load env buffer  from this folder', default='./env_ref_buffer/env_ref_buffer_1')
     parser.add_argument('--load-all-env-ref-buffer', help='saving networks to this folder', default='False')
+    parser.add_argument('--save-graph-episodes', help='save graph in every x epides', default=1000)
+    parser.add_argument('--save-image-episodes', help='save image in every x epides', default=5)
 
 
     parser.set_defaults(render_env=True)
