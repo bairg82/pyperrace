@@ -54,12 +54,12 @@ class ActorNetwork(object):
             # Actor Network
             self.inputs, self.out, self.scaled_out = self.create_actor_network(scope = 'actor')
 
-            self.network_params = tf.trainable_variables(scope='actor')
+            self.network_params = tf.trainable_variables()
 
             # Target Network
             self.target_inputs, self.target_out, self.target_scaled_out = self.create_actor_network(scope = 'actor_target')
 
-            self.target_network_params = tf.trainable_variables(scope='actor')[
+            self.target_network_params = tf.trainable_variables()[
                                          len(self.network_params):]
 
             # Op for periodically updating target network with online network
@@ -171,7 +171,7 @@ class CriticNetwork(object):
             # Target Network
             self.target_inputs, self.target_action, self.target_out = self.create_critic_network(scope = 'critic_target')
 
-            self.target_network_params = tf.trainable_variables(scope='critic')[(len(self.network_params) + num_actor_vars):]
+            self.target_network_params = tf.trainable_variables()[(len(self.network_params) + num_actor_vars):]
 
             # Op for periodically updating target network with online network
             # weights with regularization
@@ -236,7 +236,7 @@ class CriticNetwork(object):
             # Weights are init to Uniform[-3e-3, 3e-3]
             w_init = tflearn.initializations.uniform(minval=-0.003, maxval=0.003)
             out = tflearn.fully_connected(net, 1, weights_init=w_init, name='critic_output')
-            self.model = model = tflearn.DNN(out)
+            # self.model = model = tflearn.DNN(out)
             return inputs, action, out
 
     def train(self, inputs, action, predicted_q_value):
@@ -608,7 +608,7 @@ def main(args):
                            save_env_ref_buffer_dir=args['save_env_ref_buffer_dir'],\
                            save_env_ref_buffer_name=args['save_env_ref_buffer_name'],\
                            load_env_ref_buffer=args['load_env_ref_buffer'],\
-                           load_all_env_ref_buffer=args['load_all_env_ref_buffer_dir'])
+                           load_all_env_ref_buffer=args['load_all_env_ref_buffer'])
 
         np.random.seed(int(args['random_seed']))
         tf.set_random_seed(int(args['random_seed']))
@@ -642,7 +642,8 @@ def main(args):
                                      save_dir = args['experience_dir'],
                                      save_name = args['experience_name'])
 
-        replay_buffer.load(load_file=args['load_env_ref_buffer'], args['load_all_env_ref_buffer'])
+        replay_buffer.load(load_file=args['load_env_ref_buffer'], \
+                           load_all=args['load_all_env_ref_buffer'])
 
         train(sess, env, args, actor, critic, actor_noise, replay_buffer)
 

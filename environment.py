@@ -27,7 +27,7 @@ import pickle
 class PaperRaceEnv:
     """ez az osztály biztosítja a tanuláshoz a környezetet"""
 
-    def __init__(self, trk_pic_file, trk_col, gg_pic, sections, random_init, ref_buffer_load_dir, \
+    def __init__(self, trk_pic_file, trk_col, gg_pic, sections, random_init, \
                  track_inside_color=None, \
                  save_env_ref_buffer_dir = './env_ref_buffer', \
                  save_env_ref_buffer_name = 'env_ref_buffer_1', \
@@ -726,7 +726,7 @@ class PaperRaceEnv:
         self.ref_buffer[tuple(position)] = [curr_dist_in, pos_in, curr_dist_out, pos_out]
         self.ref_buffer_unsaved += 1
         # save env ref buffer if 1000 new reference exists
-        if self.ref_buffer_unsaved = 1000:
+        if self.ref_buffer_unsaved >= 1000:
             self.ref_buffer_unsave = 0
             self.ref_buffer_save()
         return curr_dist_in, pos_in, curr_dist_out, pos_out
@@ -742,7 +742,7 @@ class PaperRaceEnv:
     def ref_buffer_load(self, file_name='', load_all = 'False', load_all_dir = ''):
         #TODO load all
         try:
-            with open(file_name', 'rb') as file:
+            with open(file_name, 'rb') as file:
                 while True:
                     obj = pickle.load(file)
                     if (not obj):
