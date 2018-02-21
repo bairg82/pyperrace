@@ -375,14 +375,14 @@ def train(sess, env, args, actor, critic, actor_noise, replay_buffer):
     # az emberi jatekokat bele kell "keverni" majd, mint experience. Hogy a teljes tanitásra szánt epizodok alatt
     # mikor, az a lenti matrixban dol el. Minden sor egy szakaszt jelöl, amiben exploration van:
 
-    ep_for_exp = np.array([0, 0.05,
-                           0.10, 0.15,
-                           0.20, 0.25]) * int(args['max_episodes'])
+    ep_for_exp = np.array([0, 0.10,
+                           0.15, 0.25,
+                           0.35, 0.45]) * int(args['max_episodes'])
 
     # Minden sor szam pedig hogy abban a fentiekben megadott intervallumokban mennyiről mennyire csökkenjen a szórás.
-    sig_for_exp = np.array([30, 0,
-                            10, 5,
-                            15, 0])
+    sig_for_exp = np.array([5, 0,
+                            10, 0,
+                            20, 0])
 
     #Jani véletlenszerű lépés tanulás közben arány
     rand_stp_normal = 0.001
@@ -651,17 +651,17 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='provide arguments for DDPG agent')
 
     # agent parameters
-    parser.add_argument('--actor-lr', help='actor network learning rate',   default=0.000001)
-    parser.add_argument('--critic-lr', help='critic network learning rate', default=0.0001)
+    parser.add_argument('--actor-lr', help='actor network learning rate',   default=0.000005)
+    parser.add_argument('--critic-lr', help='critic network learning rate', default=0.0005)
     parser.add_argument('--gamma', help='discount factor for critic updates', default=0.998)
     parser.add_argument('--tau', help='soft target update parameter', default=0.001)
-    parser.add_argument('--buffer-size', help='max size of the replay buffer', default=4000)
+    parser.add_argument('--buffer-size', help='max size of the replay buffer', default=500000)
     parser.add_argument('--minibatch-size', help='size of minibatch for minibatch-SGD', default=32)
 
     # run parameters
     parser.add_argument('--env', help='choose the gym env- tested on {Pendulum-v0}', default='pyperrace')
     parser.add_argument('--random-seed', help='random seed for repeatability', default=12131)
-    parser.add_argument('--max-episodes', help='max num of episodes to do while training', default=1000)
+    parser.add_argument('--max-episodes', help='max num of episodes to do while training', default=10000)
     parser.add_argument('--max-episode-len', help='max length of 1 episode', default=40)
     parser.add_argument('--render-env', help='render the gym env', action='store_true')
     parser.add_argument('--use-gym-monitor', help='record gym results', action='store_true')

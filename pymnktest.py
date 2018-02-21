@@ -16,17 +16,17 @@ import pymunk.autogeometry
 
 
 def draw_helptext(screen):
-    font = pygame.font.Font(None, 16)
+    font = pygame.font.Font(None, 32)
     text = ["LMB(hold): Draw pink color",
             "LMB(hold) + Shift: Create balls",
             "g: Generate segments from pink color drawing",
             "r: Reset",
             ]
-    y = 5
+    y = 10
     for line in text:
         text = font.render(line, 1, THECOLORS["black"])
         screen.blit(text, (5, y))
-        y += 10
+        y += 20
 
 
 def generate_geometry(surface, space):
@@ -48,7 +48,7 @@ def generate_geometry(surface, space):
         line_set.collect_segment(v0, v1)
 
     pymunk.autogeometry.march_soft(
-        BB(0, 0, 599, 599), 60, 60, 90, segment_func, sample_func)
+        BB(0, 0, 2000, 2000), 200, 200, 90, segment_func, sample_func)
 
     for polyline in line_set:
         line = pymunk.autogeometry.simplify_curves(polyline, 1.)
@@ -65,8 +65,8 @@ def generate_geometry(surface, space):
 
 def main():
     pygame.init()
-    sizex = 1000
-    sizey = 1000
+    sizex = 2000
+    sizey = 2000
     screen = pygame.display.set_mode((sizex, sizey))
     clock = pygame.time.Clock()
 
@@ -88,13 +88,14 @@ def main():
         return False
 
     space.add_collision_handler(0, 1).pre_solve = pre_solve
-
+    img = pygame.image.load("h1p.bmp")
     terrain_surface = pygame.Surface((sizex, sizey))
-    terrain_surface.fill(pygame.color.THECOLORS["white"])
+    # terrain_surface.fill(pygame.color.THECOLORS["white"])
+    terrain_surface.blit(img, (0, 0))
 
     color = pygame.color.THECOLORS["pink"]
     #pygame.draw.circle(terrain_surface, color, (450, 120), 100)
-    img = pygame.image.load('h1.bmp')
+
 
     generate_geometry(terrain_surface, space)
     for x in range(1):
@@ -146,7 +147,8 @@ def main():
         space.step(1. / fps)
 
         screen.fill(pygame.color.THECOLORS["white"])
-        screen.blit(terrain_surface, (0, 0))
+        #screen.blit(terrain_surface, (0, 0))
+        screen.blit(img, (0, 0))
         space.debug_draw(draw_options)
         draw_helptext(screen)
         pygame.display.flip()
