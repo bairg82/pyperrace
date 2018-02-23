@@ -21,6 +21,7 @@ from random import randint
 from skimage.morphology import disk
 from skimage.color import rgb2gray
 from math import sqrt
+import os
 
 import pickle
 
@@ -98,11 +99,14 @@ class PaperRaceEnv:
         self.prev_pos_in = np.array([0, 0])
         self.prev_pos_out = np.array([0, 0])
 
+        # nincs hasznalva sehol
+        """
         self.track_indices = [] # a pálya (szürke) pixeleinek pozícióját tartalmazza
         for x in range(self.trk_pic.shape[1]):
             for y in range(self.trk_pic.shape[0]):
                 if np.array_equal(self.trk_pic[y, x, :], self.trk_col):
                     self.track_indices.append([x, y])
+        """
 
         self.dists_in = self.__get_dists_in(False) # a kezdőponttól való "távolságot" tárolja a reward fv-hez
         self.dists_out = self.__get_dists_out(False) # a kezdőponttól való "távolságot" tárolja
@@ -742,8 +746,8 @@ class PaperRaceEnv:
     def ref_buffer_load(self, file_name='', load_all_dir = ''):
         try:
             # no directory is specified then load file with exect path
-            if load_all_dir = '':
-                file = open(file_name,'rb')
+            if load_all_dir == '':
+                self.ref_buffer_fill(file_name)
             # load all file in defined directory if specified
             else:
                 for tmp_file_name in os.listdir(load_all_dir):
@@ -751,7 +755,7 @@ class PaperRaceEnv:
         except:
             print('wrong file name or directory')
 
-    def ref_buffer_fill(selfself, file_name):
+    def ref_buffer_fill(self, file_name):
         try:
             with open(file_name, 'rb') as file:
                 while True:
