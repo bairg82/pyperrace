@@ -494,7 +494,8 @@ def train(sess, env, args, actor, critic, actor_noise, replay_buffer):
             #általában ez a fenti két sor egymsor. csak nálunk most így van megírva a környezet, hogy így kell neki beadni az actiont
             #megnézzük mit mond a környezet az adott álapotban az adott action-ra:
             #s2, r, terminal, info = env.step(a)
-            v_new, pos_new, reward, end, section_nr = env.step(gg_action, v, pos, draw, step_color)
+            v_new, pos_new, reward, end, section_nr = env.step(gg_action, v, pos, draw, draw_text='little_reward',\
+                                                               color=step_color)
             t_diff = env.get_time_diff(pos, pos_new, reward, end)
             #megintcsak a kétfelől összemásolgatott küdok miatt, feleltessünkk meg egymásnak változókat:
             s2 = [v_new[0], v_new[1], pos_new[0], pos_new[1]]
@@ -564,6 +565,7 @@ def train(sess, env, args, actor, critic, actor_noise, replay_buffer):
         # minden x epizód után legyen kép mentés
         if i % args['save_image_episodes'] == 0:
             if draw_where['file']:
+                env.draw_info(1300,800, 'reward'+ str(ep_reward))
                 env.draw_save(name='e', count=str(i))
 
 

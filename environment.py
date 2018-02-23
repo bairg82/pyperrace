@@ -175,11 +175,11 @@ class PaperRaceEnv:
             plt.savefig(path + name + count + extension)
 
     # draw info to current plot
-    def draw_info(self, reward):
+    def draw_info(self, X, Y, text):
         if use_matplotlib:
-                plt.text(1300, 1500, 'reward:' + str(reward))
+                plt.text(X, Y, text)
 
-    def step(self, spd_chn, spd_old, pos_old, draw, color):
+    def step(self, spd_chn, spd_old, pos_old, draw, draw_text='reward', draw_info_X = 1300, draw_info_Y = 1000, color=(1,0,0)):
 
         end = False
 
@@ -382,7 +382,17 @@ class PaperRaceEnv:
             X = np.array([pos_old[0], pos_new[0]])
             Y = np.array([pos_old[1], pos_new[1]])
             self.draw_section(X, Y, color=color)
-
+            if draw_text == 'reward':
+                self.draw_info(draw_info_X, draw_info_Y, 'reward:' + str(int(reward)))
+            if draw_text == 'little_reward':
+                # a szakasz felezopontjara meroleges vektoron d tavolsagra szoveg kiirasa
+                d = 10
+                tmp1 = (X[1]-X[0])*0.5
+                tmp2 = (Y[1]-Y[0])*0.5
+                h = d / sqrt(tmp1**2 + tmp2**2)
+                text_X = X[0]+tmp1-tmp2*h
+                text_Y = Y[0]+tmp2+tmp1*h
+                self.draw_info(text_X, text_Y, str(reward))
         return spd_new, pos_new, reward, end, section_nr
 
 
@@ -870,7 +880,7 @@ class PaperRaceEnv:
             action = self.ref_actions[i]
             print(action)
             gg_action = self.gg_action(action)  # action-höz tartozó vektor lekérése
-            v_new, pos_new, reward, end, section_nr = self.step(gg_action, v, pos, True, 'blue')
+            v_new, pos_new, reward, end, section_nr = self.step(gg_action, v, pos, draw=True, color= 'blue', draw_text='')
             curr_dist_in, pos_in, curr_dist_out, pos_out = self.get_ref(pos_new)
             ref_dist[i] = curr_dist_in
             epreward = epreward + reward
