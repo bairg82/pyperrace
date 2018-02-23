@@ -8,19 +8,18 @@ Author: Patrick Emami
 from collections import deque
 import random
 import numpy as np
+import os
 
 
 class ReplayBuffer(object):
 
-    def __init__(self, buffer_size, random_seed=123, save_dir = './experience', save_name = 'experience.npz'):
+    def __init__(self, buffer_size, random_seed=123):
         """
         The right side of the deque contains the most recent experiences
         """
         self.buffer_size = buffer_size
         self.count = 0
         self.buffer = deque()
-        self.save_dir = save_dir
-        self.save_name = save_name
         random.seed(random_seed)
 
     def add(self, s, a, r, t, s2):
@@ -54,7 +53,7 @@ class ReplayBuffer(object):
 
         return s_batch, a_batch, r_batch, t_batch, s2_batch
 
-    def save(self, policy = 'all', number = 1):
+    def save(self, policy = 'all', number = 1, save_dir = './experience', save_name='experiencze.npz'):
         # based on this:
         # https://docs.scipy.org/doc/numpy-1.13.0/reference/generated/numpy.savez.html#numpy.savez
 
@@ -76,21 +75,29 @@ class ReplayBuffer(object):
         s2_batch = np.array([_[4] for _ in batch])
 
         # save to file
-        np.savez((self.save_dir+'/'+self.save_name), s=s_batch, a=a_batch, r=r_batch, t=t_batch, s2=s2_batch,)
+        np.savez((save_dir+'/'+save_name), s=s_batch, a=a_batch, r=r_batch, t=t_batch, s2=s2_batch,)
 
-    def load(self, load_file='experience.npz', load_all = 'False'):
+    def load(self, load_file='experience.npz', load_all_dir = ''):
+        try:
+            # no directory is specified then load file with exect path
+            if load_all_dir == '':
+                self.load_from_file(load_file)
+            # load all file in defined directory if specified
+            else:
+                for tmp_file_name in os.listdir(load_all_dir):
+                    self.load_from_file(load_all_dir + '/' + tmp_file_name)
+        except:
+            print('wrong file name or directory')
+
+
+    def load_from_file(self, file_name):
         # based on this:
         # https://docs.scipy.org/doc/numpy-1.13.0/reference/generated/numpy.savez.html#numpy.savez
 
         added = 0
-
-        if load_all == 'True':
-            # load all files from directory
-            # TODO load all files to experience
-            loaded_files = 1
         # loading experience from file
         try:
-            npzfile = np.load(self.load_dir + '/' + load_file)
+            npzfile = np.load(file_name)
             s = npzfile['s']
             a = npzfile['a']
             r = npzfile['r']
@@ -105,7 +112,6 @@ class ReplayBuffer(object):
         except:
             # do nothing
             pass
-
         return added
 
     def clear(self):

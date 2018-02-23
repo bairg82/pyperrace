@@ -751,7 +751,7 @@ class PaperRaceEnv:
             # load all file in defined directory if specified
             else:
                 for tmp_file_name in os.listdir(load_all_dir):
-                    self.ref_buffer_fill(tmp_file_name)
+                    self.ref_buffer_fill(load_all_dir + '/' + tmp_file_name)
         except:
             print('wrong file name or directory')
 
@@ -762,7 +762,7 @@ class PaperRaceEnv:
                     obj = pickle.load(file)
                     if (not obj):
                         break
-                    key = [obj[0], obj[1]]
+                    key = [int(obj[0]), int(obj[1])]
                     value = [obj[2], [obj[3], obj[4]], obj[5], [obj[6], obj[7]]]
                     self.ref_buffer[tuple(key)] = value
         except:

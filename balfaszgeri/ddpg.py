@@ -301,7 +301,6 @@ def train(sess, env, args, actor, critic, actor_noise):
         ep_ave_max_q = 0
 
         # ------------------kornyezet kirajzolasahoz---------------------------------
-        color = (1, 0, 0)
         draw = False
         if i == draws:
             draw = True
@@ -329,6 +328,8 @@ def train(sess, env, args, actor, critic, actor_noise):
 
         #egy egy epizódon belül ennyi lépés van maximum:
         for j in range(int(args['max_episode_len'])):
+
+            step_color = (1, 0, 0)
 
             s = [v[0], v[1], pos[0], pos[1]] #az eredeti kodban s-be van gyujtve az ami a masikban pos és v
 
