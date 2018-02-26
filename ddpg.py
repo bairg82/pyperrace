@@ -384,7 +384,7 @@ def train(sess, env, args, actor, critic, actor_noise, replay_buffer):
     rand_stp_min = 0.001
 
     # ====================
-    # Indul egy epizod:
+    # Indul egy epizod:regrgterg
     # ====================
 
     for i in range(max_episodes):
