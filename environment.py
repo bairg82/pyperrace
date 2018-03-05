@@ -70,6 +70,7 @@ class PaperRaceEnv:
         # Az első szakasz a sectionban, lesz a startvonal
         self.sections = sections
 
+        self.startendsections = sections
         # A kezdo pozicio a startvonal fele, es onnan 1-1 pixellel "arrebb" Azert hogy ne legyen a startvonal es a
         # kezdeti sebesseg metszo.
         # ezen a ponton section_nr = 0, az elso szakasz a listaban (sections) a startvonal
@@ -156,6 +157,7 @@ class PaperRaceEnv:
         # pálya kirajzolása
         if use_matplotlib:
             plt.imshow(self.trk_pic)
+        self.draw_sections(self.startendsections, color='orange')
 
     # it draws all section from self section
     def draw_sections(self):
@@ -164,6 +166,14 @@ class PaperRaceEnv:
                 X = np.array([self.sections[i][0], self.sections[i][2]])
                 Y = np.array([self.sections[i][1], self.sections[i][3]])
                 self.draw_section(X, Y, color='blue')
+
+    # it draws all section from self section
+    def draw_sections(self, sections, color):
+        # Szakaszok kirajzolása
+        for i in range(len(sections)):
+            X = np.array([sections[i][0], sections[i][2]])
+            Y = np.array([sections[i][1], sections[i][3]])
+            self.draw_section(X, Y, color=color)
 
     # it clears current plot
     def draw_clear(self):
@@ -223,6 +233,7 @@ class PaperRaceEnv:
         # ===================
         # Lépések:
         # ===================
+        curr_dist_in_old, pos_temp_in_old, curr_dist_out_old, pos_temp_out_old = self.get_ref(pos_old)
 
         # Ha lemegy a palyarol:
         if not step_on_track:
@@ -320,7 +331,6 @@ class PaperRaceEnv:
 
             # megnezzuk hol jarunk (get_dist.. majd atirni ezt a fugvenyt)
             # print("PosOld:", pos_old, "PosNew:", pos_new)
-            curr_dist_in_old, pos_temp_in_old, curr_dist_out_old, pos_temp_out_old = self.get_ref(pos_old)
             # megnezzuk, az uj pozicioban hol jarunk:
             curr_dist_in_new, pos_temp_in_new, curr_dist_out_new, pos_temp_out_new = self.get_ref(pos_new)
             # print(curr_dist_in_old, curr_dist_in_new)
@@ -376,10 +386,6 @@ class PaperRaceEnv:
                 reward = 1
             """
 
-            if draw:
-                X = np.array([pos_temp_in_old[0], pos_temp_out_old[0]])
-                Y = np.array([pos_temp_in_old[1], pos_temp_out_old[1]])
-                self.draw_section(X, Y, color='magenta')
 
         # ha barmi miatt az autó megáll, sebesseg zerus, akkor vége
         if np.array_equal(spd_new, [0, 0]):
@@ -387,6 +393,11 @@ class PaperRaceEnv:
 
         # Ha akarjuk, akkor itt rajzoljuk ki az aktualis lepes abrajat (lehet maskor kene)
         if draw: # kirajzolja az autót
+            # szakasz hatar
+            X = np.array([pos_temp_in_old[0], pos_temp_out_old[0]])
+            Y = np.array([pos_temp_in_old[1], pos_temp_out_old[1]])
+            self.draw_section(X, Y, color='magenta')
+
             X = np.array([pos_old[0], pos_new[0]])
             Y = np.array([pos_old[1], pos_new[1]])
             self.draw_section(X, Y, color=color)
@@ -397,10 +408,13 @@ class PaperRaceEnv:
                 d = 10
                 tmp1 = (X[1]-X[0])*0.5
                 tmp2 = (Y[1]-Y[0])*0.5
-                h = d / sqrt(tmp1**2 + tmp2**2)
+                h = d / max(sqrt(tmp1**2 + tmp2**2), 0.01)
                 text_X = X[0]+tmp1-tmp2*h
                 text_Y = Y[0]+tmp2+tmp1*h
                 self.draw_info(text_X, text_Y, str(reward))
+            else:
+                self.draw_info(draw_info_X, draw_info_Y, draw_text)
+
         return spd_new, pos_new, reward, end, section_nr
 
 

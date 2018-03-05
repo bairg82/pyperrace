@@ -357,7 +357,7 @@ def train(sess, env, args, actor, critic, actor_noise, replay_buffer):
     # osszes tanulas alatt ennyiszer rajzolunk:
 
     # draw_config = 'allepisode'
-    draws = 1
+    draws = args['save_image_episodes']
 
     # draw_config = 'perxepisode'
     # draws = 100
@@ -388,6 +388,9 @@ def train(sess, env, args, actor, critic, actor_noise, replay_buffer):
     #Jani véletlenszerű lépés tanulás közben arány
     rand_stp_normal = 0.001
 
+    # store steps in it
+    episode_steps = []
+
     # ====================
     # Indul egy epizod:
     # ====================
@@ -409,7 +412,7 @@ def train(sess, env, args, actor, critic, actor_noise, replay_buffer):
         # ------------------kornyezet kirajzolasahoz---------------------------------
 
         # draw in this episode
-        if i%draws == 0:
+        if i % draws == 0:
             draw = True
         else:
             draw = False
@@ -431,8 +434,8 @@ def train(sess, env, args, actor, critic, actor_noise, replay_buffer):
         
         #ennyiedik leestol kezdve random lesz a lepes:
         lepestol = rnd.uniform(0, env.ref_actions.size * (100*i) / max_episodes)
-        lepestol = np.random.uniform(0, env.ref_actions.size * (100*i) / int(args['max_episodes']), 1)
         """
+        lepestol = np.random.uniform(0, env.ref_actions.size * (100*i) / int(args['max_episodes']), 1)
 
 
         # az emberi lepessorok kozul valasszunk egyet veletlenszeruen mint aktualis epizod lepessor:
@@ -440,6 +443,8 @@ def train(sess, env, args, actor, critic, actor_noise, replay_buffer):
 
         # a random lepesekhez a szoras:
         szoras = np.interp(i, ep_for_exp, sig_for_exp)
+
+        lepesek = []
 
         #egy egy epizódon belül ennyi lépés van maximum:
         for j in range(int(args['max_episode_len'])):
@@ -464,8 +469,10 @@ def train(sess, env, args, actor, critic, actor_noise, replay_buffer):
                 if j < curr_ref_actions.size:
                     a = int(np.random.normal(curr_ref_actions[j], szoras, 1))  # int(actor.predict(np.reshape(s, (1, actor.state_dim))))
                     print("\033[93m {}\033[00m".format("        -------ref action:"), a)
+                    step_color = (0, 0, 1)
                 else:
                     a = int(np.random.uniform(-180, 180, 1))
+                    step_color = (0, 1, 0)
                     print("\033[92m {}\033[00m".format("        -------uni rand action:"), a)
 
                 if (lepestol < j) and (j < env.ref_actions.size):
@@ -483,18 +490,17 @@ def train(sess, env, args, actor, critic, actor_noise, replay_buffer):
                         print("\033[93m {}\033[00m" .format("        -------ref action:"), a)
                     else:
                         a = int(rnd.uniform(-180, 180))
-                        step_color = (0, 1, 0)
                         print("\033[92m {}\033[00m".format("        -------uni rand action:"), a)
                 """
 
             # Jani random lépés
             elif (rand_step is True):
                 step_color = (1, 1, 0)
-                a = int(rnd.uniform(-180, 180))
+                a = int(np.random.uniform(-180, 180))
                 print("\033[94m {}\033[00m".format("        -------full random action:"), a)
             else:
-                a = int(actor.predict(np.reshape(s, (1, actor.state_dim))) + 0 * actor_noise()) + int(
-                    np.random.randint(-3, 3, size=1))
+                a = int(actor.predict(np.reshape(s, \
+                                                 (1, actor.state_dim))) + 0 * actor_noise()) + int(np.random.randint(-3, 3, size=1))
                 step_color = (1, 0, 0)
                 print("Netwrk action:--------", a)
 
@@ -503,7 +509,8 @@ def train(sess, env, args, actor, critic, actor_noise, replay_buffer):
             #általában ez a fenti két sor egymsor. csak nálunk most így van megírva a környezet, hogy így kell neki beadni az actiont
             #megnézzük mit mond a környezet az adott álapotban az adott action-ra:
             #s2, r, terminal, info = env.step(a)
-            v_new, pos_new, reward, end, section_nr = env.step(gg_action, v, pos, draw, draw_text='little_reward',\
+            v_new, pos_new, reward, end, section_nr = env.step(gg_action, v, pos, draw, \
+                                                               draw_text='little_reward',\
                                                                color=step_color)
             t_diff = env.get_time_diff(pos, pos_new, reward, end)
             #megintcsak a kétfelől összemásolgatott küdok miatt, feleltessünkk meg egymásnak változókat:
@@ -513,7 +520,8 @@ def train(sess, env, args, actor, critic, actor_noise, replay_buffer):
             ep_reward += r
 
             #és akkor a megfeleltetett változókkal már lehet csinálni a replay memory-t:
-            replay_buffer.add(np.reshape(s, (actor.state_dim,)), np.reshape(a, (actor.action_dim,)), r, terminal, np.reshape(s2, (actor.state_dim,)))
+            replay_buffer.add(np.reshape(s, (actor.state_dim,)), np.reshape(a, (actor.action_dim,)), r, terminal, \
+                              np.reshape(s2, (actor.state_dim,)))
 
             # Keep adding experience to the memory until there are at least minibatch size samples, És amig a
             # tanulas elejen a random lepkedos fazisban vagyunk.
@@ -551,6 +559,7 @@ def train(sess, env, args, actor, critic, actor_noise, replay_buffer):
             v = v_new
             pos = pos_new
 
+            lepesek.append(a)
             if terminal:
                 #Ha egybol (J=0-nal vege)
                 if j == 0:
@@ -566,15 +575,30 @@ def train(sess, env, args, actor, critic, actor_noise, replay_buffer):
                 break
             # end of if terminal
         # end of steps
+        episode_steps.append([i, ep_reward, lepesek])
+
         print('| Reward: {:.3f} | Episode: {:d} | Qmax: {:.4f}'.format(ep_reward, i, (ep_ave_max_q / float(j))))
 
         # minden századik epizód után legyen mentés
         if i % args['save_graph_episodes'] == 0:
             saver.save(sess, args['network_dir'] + '/full_network_e' + str(i) + '.tfl')
+            sorted_list = sorted(episode_steps, key=lambda x: x[1])[-1:]
+            print("best episode:")
+            print(sorted_list)
+            # writing best to file
+            with open('best.stp', 'w') as file:
+                file.write(str(sorted_list[0][1])+"\033")
+                for k in range(len(sorted_list[0][2])):
+                    file.write(str(sorted_list[0][2][k])+"\033")
+
         # minden x epizód után legyen kép mentés
-        if i % args['save_image_episodes'] == 0:
+        if draw:
             if draw_where['file']:
-                env.draw_info(1300,800, 'reward'+ str(ep_reward))
+                env.draw_info(400, \
+                              1450, \
+                              '| Reward: {:.3f} | Episode: {:d} | Qmax: {:.4f}'.format(ep_reward, \
+                                                                                       i, \
+                                                                                       (ep_ave_max_q / float(j))))
                 env.draw_save(name='e', count=str(i))
 
 
@@ -670,17 +694,17 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='provide arguments for DDPG agent')
 
     # agent parameters
-    parser.add_argument('--actor-lr', help='actor network learning rate',   default=0.000005)
+    parser.add_argument('--actor-lr', help='actor network learning rate',   default=0.0003)
     parser.add_argument('--critic-lr', help='critic network learning rate', default=0.0005)
     parser.add_argument('--gamma', help='discount factor for critic updates', default=0.998)
     parser.add_argument('--tau', help='soft target update parameter', default=0.001)
-    parser.add_argument('--buffer-size', help='max size of the replay buffer', default=500000)
+    parser.add_argument('--buffer-size', help='max size of the replay buffer', default=1500000)
     parser.add_argument('--minibatch-size', help='size of minibatch for minibatch-SGD', default=32)
 
     # run parameters
     parser.add_argument('--env', help='choose the gym env- tested on {Pendulum-v0}', default='pyperrace')
     parser.add_argument('--random-seed', help='random seed for repeatability', default=12131)
-    parser.add_argument('--max-episodes', help='max num of episodes to do while training', default=10000)
+    parser.add_argument('--max-episodes', help='max num of episodes to do while training', default=100)
     parser.add_argument('--max-episode-len', help='max length of 1 episode', default=40)
     parser.add_argument('--summary-dir', help='directory for storing tensorboard info', default='./results')
     parser.add_argument('--save-experience-dir', help='directory for saving experiences', default='./experience')
@@ -693,7 +717,7 @@ if __name__ == '__main__':
     parser.add_argument('--load-env-ref-buffer', help='load env buffer  from this folder', default='./env_ref_buffer/env_ref_buffer_1')
     parser.add_argument('--load-all-env-ref-buffer-dir', help='saving networks to this folder', default='./env_ref_buffer')
     parser.add_argument('--save-graph-episodes', help='save graph in every x epides', default=1000)
-    parser.add_argument('--save-image-episodes', help='save image in every x epides', default=5)
+    parser.add_argument('--save-image-episodes', help='save image in every x epides', default=100)
 
 
     parser.set_defaults(render_env=True)
