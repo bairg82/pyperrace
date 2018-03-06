@@ -337,7 +337,7 @@ def train(sess, env, args, actor, critic, actor_noise, replay_buffer):
     sess.run(tf.global_variables_initializer())
 
     # to save all 100th
-    saver = tf.train.Saver(max_to_keep=0)
+    saver = tf.train.Saver(max_to_keep=2)
 
     # writer = tf.summary.FileWriter((args['summary_dir']))
     writer = tf.summary.FileWriter(logdir = args['summary_dir'], graph = sess.graph)
@@ -499,8 +499,10 @@ def train(sess, env, args, actor, critic, actor_noise, replay_buffer):
                 a = int(np.random.uniform(-180, 180))
                 print("\033[94m {}\033[00m".format("        -------full random action:"), a)
             else:
+                # a = int(actor.predict(np.reshape(s, \
+                #                                 (1, actor.state_dim))) + 0 * actor_noise()) + int(np.random.randint(-3, 3, size=1))
                 a = int(actor.predict(np.reshape(s, \
-                                                 (1, actor.state_dim))) + 0 * actor_noise()) + int(np.random.randint(-3, 3, size=1))
+                                                 (1, actor.state_dim)))) + int(np.random.randint(-3, 3, size=1))
                 step_color = (1, 0, 0)
                 print("Netwrk action:--------", a)
 
