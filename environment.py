@@ -869,8 +869,30 @@ class PaperRaceEnv:
             # Ha kimegyünk a pályáról akkor legyen a reward az hogy mennyi időbe telne onnan ahol kimentünk a referencia
             # lépéssornak beérni
         else:
+            #el kell lepkedni az oldposbol az ujposba es ahol eloszor kilep a palyarol abban a pontban kell a rewardot
+            #meghatarozni
+            tmp_dist = 1
+            v_x = pos_new[0]-pos_old[0]
+            v_y = pos_new[1]-pos_old[1]
+            v_abs = sqrt(v_x**2 + v_y**2)
+            dist_x = 0
+            dist_y = 0
+            while tmp_dist < v_abs:
+                dist_x = int(tmp_dist*v_x/v_abs)
+                dist_y = int(tmp_dist*v_y/v_abs)
+                ontrack, inside, outside = self.is_on_track(np.array([pos_old[0]+dist_x, pos_old[1]+dist_y]))
+                if (ontrack is False):
+                    break
+                tmp_dist += 1
+            # az egyel korabbi tavolsag ertekhez tartozo lesz meg belül
+            tmp_dist -= 1
+            dist_x = int(tmp_dist * v_x / v_abs)
+            dist_y = int(tmp_dist * v_y / v_abs)
+            #ebben a pozicioban kell tavolsagot meghatarozni
+            curr_dist_in, curr_pos_in, curr_dist_out, curr_pos_out = self.get_ref(np.array([pos_old[0]+dist_x, pos_old[1]+dist_y]))
+
             # a pre pos-nal a tavolsag: pre_dist_in, itt kell lekerdezni a ref lepessor idejet
-            yinterp = np.interp(pre_dist_in, x, y, 0)
+            yinterp = np.interp(curr_dist_in, x, y, 0)
             # a kieses helyetol a ref lepessorral, hatra levo ido:
             remain_time = self.ref_steps[-1] - yinterp
             #print("a kiese helyetol e ref lepessorral hatra levo ido:", remain_time )
