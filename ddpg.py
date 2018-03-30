@@ -15,8 +15,8 @@ import os
 
 # OnHPC = True
 
-# used_device = '/gpu:0'
-used_device = '/cpu:0'
+used_device = '/gpu:0'
+# used_device = '/cpu:0'
 
 #import gym
 from environment import PaperRaceEnv
