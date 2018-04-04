@@ -6,6 +6,8 @@ from replay_buffer import ReplayBuffer
 
 import random as rnd
 
+import matplotlib.image as mpimg
+
 trk_col = np.array([99, 99, 99]) # pálya színe (szürke)
 
 #sections = np.array([[350,  60, 350, 100],
@@ -68,6 +70,7 @@ if rndlep == 1:
 else:
     random = False
 
+env.gg_pic = mpimg.imread('GG1_gokart.bmp')
 
 for ep in range(episodes):
     env.reset()

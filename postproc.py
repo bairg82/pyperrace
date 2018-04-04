@@ -5,12 +5,13 @@ from environment import PaperRaceEnv
 
 from collections import OrderedDict
 
+import matplotlib.image as mpimg
 
 trk_col = np.array([99, 99, 99]) # pálya színe (szürke)
 
 # h1.bmp-hez:
 sections = np.array([[200, 220, 200, 50],  # [333, 125, 333, 64],[394, 157, 440, 102],
-                     [400, 1250, 500, 1400]])
+                     [350, 1150, 400, 1400]])
 
 env = PaperRaceEnv('h1.bmp', trk_col, 'GG1.bmp', sections, random_init=False) # paperrace környezet létrehozása
 mem_size = 100 # a memória mérete, amiből a batch-be válogatunk
@@ -57,7 +58,7 @@ linestyles_odict = OrderedDict(
 linestyles = list(linestyles_odict.items())
 
 hum_act = (
-    [70, -70, 0, -180, -180, -180, -165, -150, -140, -120, -110, -100, -90, -90, -80, -80, -80, -80, -40, -40, -30,
+    [70, -30, -70, -180, -180, -180, -110, -110, -110, -90, -110, -100, -90, -90, -80, -80, -80, -80, -40, -40, -30,
      -30, -20, -20, -20, -20, -10], \
     [90, -90, -50, 100, -180, -180, -180, -160, -150, -140, -110, -100, -90, -90, -80, -70, -70, -70, -60, -40, -20,
      -20, -20, -20, -10, -10, -10], \
@@ -86,9 +87,9 @@ for ep in range(episodes):
     end = False
     color = (0, 0, 1)
 
+    env.gg_pic = mpimg.imread('GG1_gokart.bmp')
     # az emberi lepesek kirajzolgatása
     for ii in range(len(hum_act)):
-        input()
         print(ii)
         v = np.array(env.starting_spd)
         pos = np.array(env.starting_pos)

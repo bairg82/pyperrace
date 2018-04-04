@@ -1,6 +1,6 @@
 "Ez a HPC-s verzio³"
 
-OnHPC = True
+OnHPC = False
 
 use_matplotlib = True
 
@@ -146,6 +146,10 @@ class PaperRaceEnv:
         [0, -180, -180, -170, 120, 120, -130, -130, -130, -100, 100, 100, 100, -110, -110, -110, -110, -110, -100, -100,
          100, 100, -100, -100, -120, -100, -100, 90, 80, -60, 60, -30, -30, -20, -30, -30, -40, -40, -50, -30])
 
+        self.hum_act_gokart = (
+            [-180, -180, -180, -180, -180, 110, -110, 110, -110, 20, 30, -30, -110, -110, 110, 110, -110, -110, -110, -110,
+             -110, -110, -90, 90, 130, -110, -11, -110, -110, -110, 110, -70, 70, -70, 40, 20, -20, -20, -30, -60, 20, -30,
+             -90])
         self.ref_actions = np.array(self.hum_act[0])
 
         # ehhez van egy init, ami eloallitja a belso iv menten mert elorehaladast minden lepesben
@@ -754,7 +758,7 @@ class PaperRaceEnv:
             # TODO ezt el kéne kerülni, ha jó a fenti rész ez nem hívódik meg
             # ha nincsennek a kapott potok a dict-ben, akkor a külsö-belsö pontokat osszekoto szakaszon levo ponthoz
             # kerunk ref-et. Ez sem igazan jo megoldas dehat...
-  #ITT EZ A BUZI VEGTELEN REKURZIOBA KERUL HA KOZEL LEPUNK A FALHOZ pl az envterstben az elso lepes 15, es utana pl.5
+            #ITT EZ A BUZI VEGTELEN REKURZIOBA KERUL HA KOZEL LEPUNK A FALHOZ pl az envterstben az elso lepes 15, es utana pl.5
             pos_fel = pos_out + (pos_in - pos_out) * 0.5 #rnd.uniform(0.4, 0.6)
             curr_dist_in, pos_in, curr_dist_out, pos_out = self.get_ref(pos_fel)
 

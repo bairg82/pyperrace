@@ -15,8 +15,8 @@ import os
 
 # OnHPC = True
 
-used_device = '/gpu:0'
-# used_device = '/cpu:0'
+# used_device = '/gpu:0'
+used_device = '/cpu:0'
 
 #import gym
 from environment import PaperRaceEnv
@@ -24,6 +24,8 @@ from environment import PaperRaceEnv
 import tflearn
 import argparse
 import pprint as pp
+
+import matplotlib.image as mpimg
 
 
 from replay_buffer import ReplayBuffer
@@ -438,8 +440,10 @@ def train(sess, env, args, actor, critic, actor_noise, replay_buffer):
         lepestol = np.random.uniform(0, env.ref_actions.size * (100*i) / int(args['max_episodes']), 1)
 
 
+
         # az emberi lepessorok kozul valasszunk egyet veletlenszeruen mint aktualis epizod lepessor:
-        curr_ref_actions = np.array(env.hum_act[int(np.random.uniform(0, int(len(env.hum_act)), 1))])
+        #curr_ref_actions = np.array(env.hum_act[int(np.random.uniform(0, int(len(env.hum_act)), 1))])
+        curr_ref_actions = np.array(env.hum_act_gokart[0])
 
         # a random lepesekhez a szoras:
         szoras = np.interp(i, ep_for_exp, sig_for_exp)
@@ -649,6 +653,8 @@ def main(args):
                            save_env_ref_buffer_name=args['save_env_ref_buffer_name'],\
                            load_env_ref_buffer=args['load_env_ref_buffer'],\
                            load_all_env_ref_buffer_dir=args['load_all_env_ref_buffer_dir'])
+
+        env.gg_pic = mpimg.imread('GG1_gokart.bmp')
 
         np.random.seed(int(args['random_seed']))
         tf.set_random_seed(int(args['random_seed']))
