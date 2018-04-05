@@ -25,8 +25,6 @@ import tflearn
 import argparse
 import pprint as pp
 
-import matplotlib.image as mpimg
-
 
 from replay_buffer import ReplayBuffer
 
@@ -588,6 +586,8 @@ def train(sess, env, args, actor, critic, actor_noise, replay_buffer):
         # minden századik epizód után legyen mentés
         if i % args['save_graph_episodes'] == 0:
             saver.save(sess, args['network_dir'] + '/full_network_e' + str(i) + '.tfl')
+
+            #legjobb mentese
             sorted_list = sorted(episode_steps, key=lambda x: x[1])[-1:]
             print("best episode:")
             print(sorted_list)
@@ -648,13 +648,16 @@ def main(args):
         # Gergo
         sections = np.array([[200, 220, 200, 50],  # [333, 125, 333, 64],[394, 157, 440, 102],
                              [200, 1250, 250, 1400]])
+
+        # GG1.bmp is used for reward function
         env = PaperRaceEnv('h1.bmp', trk_col, 'GG1.bmp', sections, random_init=False, \
                            save_env_ref_buffer_dir=args['save_env_ref_buffer_dir'],\
                            save_env_ref_buffer_name=args['save_env_ref_buffer_name'],\
                            load_env_ref_buffer=args['load_env_ref_buffer'],\
                            load_all_env_ref_buffer_dir=args['load_all_env_ref_buffer_dir'])
 
-        env.gg_pic = mpimg.imread('GG1_gokart.bmp')
+        # changing environment gg map
+        env.change_gg('GG1_gokart.bmp')
 
         np.random.seed(int(args['random_seed']))
         tf.set_random_seed(int(args['random_seed']))
@@ -712,7 +715,7 @@ if __name__ == '__main__':
     # run parameters
     parser.add_argument('--env', help='choose the gym env- tested on {Pendulum-v0}', default='pyperrace')
     parser.add_argument('--random-seed', help='random seed for repeatability', default=12131)
-    parser.add_argument('--max-episodes', help='max num of episodes to do while training', default=100)
+    parser.add_argument('--max-episodes', help='max num of episodes to do while training', default=102)
     parser.add_argument('--max-episode-len', help='max length of 1 episode', default=40)
     parser.add_argument('--summary-dir', help='directory for storing tensorboard info', default='./results')
     parser.add_argument('--save-experience-dir', help='directory for saving experiences', default='./experience')
@@ -724,7 +727,7 @@ if __name__ == '__main__':
     parser.add_argument('--save-env-ref-buffer-name', help='saving and loading ref buffer from this dir', default='env_ref_buffer_1')
     parser.add_argument('--load-env-ref-buffer', help='load env buffer  from this folder', default='./env_ref_buffer/env_ref_buffer_1')
     parser.add_argument('--load-all-env-ref-buffer-dir', help='saving networks to this folder', default='./env_ref_buffer')
-    parser.add_argument('--save-graph-episodes', help='save graph in every x epides', default=1000)
+    parser.add_argument('--save-graph-episodes', help='save graph in every x epides', default=100)
     parser.add_argument('--save-image-episodes', help='save image in every x epides', default=100)
 
 

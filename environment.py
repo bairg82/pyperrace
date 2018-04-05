@@ -149,7 +149,8 @@ class PaperRaceEnv:
         self.hum_act_gokart = (
             [-180, -180, -180, -180, -180, 110, -110, 110, -110, 20, 30, -30, -110, -110, 110, 110, -110, -110, -110, -110,
              -110, -110, -90, 90, 130, -110, -11, -110, -110, -110, 110, -70, 70, -70, 40, 20, -20, -20, -30, -60, 20, -30,
-             -90])
+             -90],
+            [0, 0])
         self.ref_actions = np.array(self.hum_act[0])
 
         # ehhez van egy init, ami eloallitja a belso iv menten mert elorehaladast minden lepesben
@@ -454,6 +455,10 @@ class PaperRaceEnv:
             """
 
         return ontrack, inside, outside
+
+    def change_gg(self, file):
+        self.gg_pic = mpimg.imread(file)
+
 
     def gg_action(self, action):
         # az action-ökhöz tartozó vektor értékek
