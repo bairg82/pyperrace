@@ -317,7 +317,10 @@ def build_summaries():
     episode_ave_max_q = tf.Variable(0., name='qmax')
     tf.summary.scalar("Qmax Value", episode_ave_max_q)
 
-    summary_vars = [episode_reward, episode_ave_max_q]
+    max_episode_reward = tf.Variable(0., name='reward_max')
+    tf.summary.scalar("Max episode reward Value", max_episode_reward)
+
+    summary_vars = [episode_reward, episode_ave_max_q, max_episode_reward]
     summary_ops = tf.summary.merge_all()
 
     return summary_ops, summary_vars
@@ -391,6 +394,8 @@ def train(sess, env, args, actor, critic, actor_noise, replay_buffer):
     # store steps in it
     episode_steps = []
 
+    best_reward = -100.0
+
     # ====================
     # Indul egy epizod:
     # ====================
@@ -408,6 +413,7 @@ def train(sess, env, args, actor, critic, actor_noise, replay_buffer):
         # kezdeti teljes epzód alatt szerzett jutalom, és legjobb q étrék:
         ep_reward = 0
         ep_ave_max_q = 0
+        # legjobb elert reward
 
         # ------------------kornyezet kirajzolasahoz---------------------------------
 
@@ -570,7 +576,8 @@ def train(sess, env, args, actor, critic, actor_noise, replay_buffer):
                     j = 1
                 summary_str = sess.run(summary_ops, feed_dict={
                     summary_vars[0]: ep_reward,
-                    summary_vars[1]: ep_ave_max_q / float(j)
+                    summary_vars[1]: ep_ave_max_q / float(j),
+                    summary_vars[2]: best_reward
                 })
 
                 writer.add_summary(summary_str, i)
@@ -591,6 +598,7 @@ def train(sess, env, args, actor, critic, actor_noise, replay_buffer):
             sorted_list = sorted(episode_steps, key=lambda x: x[1])[-1:]
             print("best episode:")
             print(sorted_list)
+            best_reward = sorted_list[0][1]
             # writing best to file
             with open('best.stp', 'w') as file:
                 file.write(str(sorted_list[0][1])+"\033")

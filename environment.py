@@ -128,7 +128,7 @@ class PaperRaceEnv:
         # #ember által lejátszott lépések: (
         self.hum_act = (
         [70, -70, 0, -180, -180, -180, -165, -150, -140, -120, -110, -100, -90, -90, -80, -80, -80, -80, -40, -40, -30,
-         -30, -20, -20, -20, -20, -10], \
+         -30, -20, -20, -20, -20, -10, -30], \
         [90, -90, -50, 100, -180, -180, -180, -160, -150, -140, -110, -100, -90, -90, -80, -70, -70, -70, -60, -40, -20,
          -20, -20, -20, -10, -10, -10], \
         [-90, 90, 50, -100, -180, -180, -180, -160, -150, -140, -110, -100, -90, -90, -80, -70, -70, -70, -40, -30, -20,
@@ -880,9 +880,9 @@ class PaperRaceEnv:
         else:
             #el kell lepkedni az oldposbol az ujposba es ahol eloszor kilep a palyarol abban a pontban kell a rewardot
             #meghatarozni
-            tmp_dist = 1
-            v_x = pos_new[0]-pos_old[0]
-            v_y = pos_new[1]-pos_old[1]
+            tmp_dist = 1.0
+            v_x = float(pos_new[0]-pos_old[0])
+            v_y = float(pos_new[1]-pos_old[1])
             v_abs = sqrt(v_x**2 + v_y**2)
             dist_x = 0
             dist_y = 0
@@ -892,11 +892,16 @@ class PaperRaceEnv:
                 ontrack, inside, outside = self.is_on_track(np.array([pos_old[0]+dist_x, pos_old[1]+dist_y]))
                 if (ontrack is False):
                     break
-                tmp_dist += 1
+                tmp_dist += 1.0
             # az egyel korabbi tavolsag ertekhez tartozo lesz meg belül
-            tmp_dist -= 1
-            dist_x = int(tmp_dist * v_x / v_abs)
-            dist_y = int(tmp_dist * v_y / v_abs)
+            tmp_dist -= 1.0
+            try:
+                dist_x = int(tmp_dist * v_x / v_abs)
+                dist_y = int(tmp_dist * v_y / v_abs)
+            except:
+                print('track side calculation error')
+                dist_x = 0
+                dist_y = 0
             #ebben a pozicioban kell tavolsagot meghatarozni
             curr_dist_in, curr_pos_in, curr_dist_out, curr_pos_out = self.get_ref(np.array([pos_old[0]+dist_x, pos_old[1]+dist_y]))
 

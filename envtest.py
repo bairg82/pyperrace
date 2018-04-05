@@ -70,7 +70,7 @@ if rndlep == 1:
 else:
     random = False
 
-env.gg_pic = mpimg.imread('GG1_gokart.bmp')
+env.gg_pic = mpimg.imread('GG_rally.bmp')
 
 for ep in range(episodes):
     env.reset()
