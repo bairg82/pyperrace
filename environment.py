@@ -15,25 +15,31 @@ if use_matplotlib:
 
 import matplotlib.image as mpimg
 import numpy as np
-import random as rnd
-from numpy import linalg as LA
 from random import randint
 from skimage.morphology import disk
 from skimage.color import rgb2gray
 from math import sqrt
 import os
-
 import pickle
+
+import tracks
+import cars
 
 class PaperRaceEnv:
     """ez az osztály biztosítja a tanuláshoz a környezetet"""
 
-    def __init__(self, trk_pic_file, trk_col, gg_pic, sections, random_init, \
-                 track_inside_color=None, \
+    def __init__(self, track_name, gg_pic, random_init, \
+                 ref_calc='default',\
                  save_env_ref_buffer_dir = './env_ref_buffer', \
                  save_env_ref_buffer_name = 'env_ref_buffer_1', \
                  load_env_ref_buffer='', \
                  load_all_env_ref_buffer_dir='',):
+
+        trk_pic_file, trk_col, track_inside_color, start_line, end_line, sections = tracks.set_track_params(track_name)
+
+        if ref_calc == 'default':
+            set_car('Touring')
+
 
         # buffer a már lekért és kiszámolt referenciákra, hogy gyorsabb legyen a lekérés
         self.ref_buffer_dir = save_env_ref_buffer_dir
@@ -45,12 +51,6 @@ class PaperRaceEnv:
         self.ref_buffer_load(load_env_ref_buffer, load_all_dir=load_all_env_ref_buffer_dir)
 
         # self.ref_buffer_load()
-        # ha nincs megadva a pálya belsejének szín, akkor pirosra állítja
-        # ez a rewardokat kiszámoló algoritmus működéséhez szükséges
-        if track_inside_color is None:
-            self.track_inside_color = np.array([255, 0, 0], dtype='uint8')
-        else:
-            self.track_inside_color = np.array(track_inside_color, dtype='uint8')
 
         # a palya kulso szine is jobb lenne nem itt, de most ganyolva ide rakjuk
         self.track_outside_color = np.array([255, 255, 255], dtype='uint8')
@@ -58,7 +58,6 @@ class PaperRaceEnv:
         self.trk_pic = mpimg.imread(trk_pic_file)  # beolvassa a pályát
         self.trk = rgb2gray(self.trk_pic)  # szürkeárnyalatosban dolgozunk
         self.trk_col = trk_col  # trk_pic-en a pálya színe
-        self.gg_pic = mpimg.imread(gg_pic) # beolvassa a GG diagramot
         self.steps = 0  # az eddig megtett lépések száma
 
         self.col_in = rgb2gray(np.reshape(np.array(self.track_inside_color), (1, 1, 3)))[0, 0]
@@ -456,9 +455,9 @@ class PaperRaceEnv:
 
         return ontrack, inside, outside
 
-    def change_gg(self, file):
+    def set_car(self, car_name):
+        file = cars.set_car_params(car_name)
         self.gg_pic = mpimg.imread(file)
-
 
     def gg_action(self, action):
         # az action-ökhöz tartozó vektor értékek

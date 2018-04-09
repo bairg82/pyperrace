@@ -619,53 +619,15 @@ def train(sess, env, args, actor, critic, actor_noise, replay_buffer):
 def main(args):
     with tf.Session() as sess:
 
-        #env = gym.make(args['env'])
-
-        trk_col = np.array([99, 99, 99])  # pálya színe (szürke), a kornyezet inicializalasahoz kell
-
-        #sections = np.array([[350,  60, 350, 100],
-        #                    [425, 105, 430, 95],
-        #                    [500, 140, 530, 110],
-        #                    [520, 160, 580, 150]])
-        #                     [ 35, 200,  70, 200],
-        #                     [250,  60, 250, 100]])
-        # env = PaperRaceEnv('PALYA3.bmp', trk_col, 'GG1.bmp', start_line, random_init=False)
-
-        # palya4 próbálkozások
-        #sections = np.array([[273, 125, 273,  64],
-        #                     [347, 125, 347,  65],
-
-        #sections = np.array([[273, 125, 273, 64], # [333, 125, 333, 64],[394, 157, 440, 102],[370, 195, 440, 270],[331, 212, 331, 267]] [220, 300, 280, 300]])
-        #                     [240, 400, 300, 380]])
-        #                    #[190, 125, 190, 64]])
-
-        # palya4 teljes
-        # sections = np.array([[273, 125, 273, 64],  # [333, 125, 333, 64],[394, 157, 440, 102],[240, 400, 330, 380]
-        #                     [100, 250, 180, 250]])
-        # env = PaperRaceEnv('PALYA4.bmp', trk_col, 'GG1.bmp', sections, random_init=False)
-
-        # palya5.bmp-hez:
-        # sections = np.array([[670, 310, 670, 130],  # [333, 125, 333, 64],[394, 157, 440, 102],
-        #                     [1250, 680, 1250, 550]])
-        # env = PaperRaceEnv('PALYA5.bmp', trk_col, 'GG1.bmp', sections, random_init=False)
-
-        # palya h1.bmp
-        # csak az eleje meg a vége
-        # Jani
-        # sections = np.array([[150, 10, 150, 250], [150, 1240, 210, 1430]])
-        # Gergo
-        sections = np.array([[200, 220, 200, 50],  # [333, 125, 333, 64],[394, 157, 440, 102],
-                             [200, 1250, 250, 1400]])
-
         # GG1.bmp is used for reward function
-        env = PaperRaceEnv('h1.bmp', trk_col, 'GG1.bmp', sections, random_init=False, \
+        env = PaperRaceEnv('h1', ref_calc = 'default', random_init=False, \
                            save_env_ref_buffer_dir=args['save_env_ref_buffer_dir'],\
                            save_env_ref_buffer_name=args['save_env_ref_buffer_name'],\
                            load_env_ref_buffer=args['load_env_ref_buffer'],\
                            load_all_env_ref_buffer_dir=args['load_all_env_ref_buffer_dir'])
 
         # changing environment gg map
-        env.change_gg('GG1_gokart.bmp')
+        env.change_car('Gokart')
 
         np.random.seed(int(args['random_seed']))
         tf.set_random_seed(int(args['random_seed']))
@@ -737,6 +699,7 @@ if __name__ == '__main__':
     parser.add_argument('--load-all-env-ref-buffer-dir', help='saving networks to this folder', default='./env_ref_buffer')
     parser.add_argument('--save-graph-episodes', help='save graph in every x epides', default=100)
     parser.add_argument('--save-image-episodes', help='save image in every x epides', default=100)
+    parser.add_argument('--show-display', help='show env in window', default='allstep')
 
 
     parser.set_defaults(render_env=True)
@@ -747,7 +710,3 @@ if __name__ == '__main__':
     pp.pprint(args)
 
     main(args)
-
-    #TODO: elejen az elsp lepesek tok random legyenek kicsit, es utana csak a ref lepessorhoz
-    #TODO: csinalni valami alap ref lepessor csinalo algoritmust (pretrain, esetleg?)
-    #TODO: reward vissza az egyszeru felere. -1 minden lepes, csak kieseskor lehet a hatralevo tav
