@@ -28,18 +28,17 @@ import cars
 class PaperRaceEnv:
     """ez az osztály biztosítja a tanuláshoz a környezetet"""
 
-    def __init__(self, track_name, gg_pic, random_init, \
+    def __init__(self, track_name, car_name, random_init, \
                  ref_calc='default',\
                  save_env_ref_buffer_dir = './env_ref_buffer', \
                  save_env_ref_buffer_name = 'env_ref_buffer_1', \
                  load_env_ref_buffer='', \
                  load_all_env_ref_buffer_dir='',):
 
-        trk_pic_file, trk_col, track_inside_color, start_line, end_line, sections = tracks.set_track_params(track_name)
+        trk_pic_file, self.trk_col, self.track_inside_color, self.track_outside_color, self.start_line, self.end_line, self.sections, self.ref_actions = tracks.get_track_params(track_name)
 
         if ref_calc == 'default':
-            set_car('Touring')
-
+            self.set_car('Touring')
 
         # buffer a már lekért és kiszámolt referenciákra, hogy gyorsabb legyen a lekérés
         self.ref_buffer_dir = save_env_ref_buffer_dir
@@ -52,13 +51,9 @@ class PaperRaceEnv:
 
         # self.ref_buffer_load()
 
-        # a palya kulso szine is jobb lenne nem itt, de most ganyolva ide rakjuk
-        self.track_outside_color = np.array([255, 255, 255], dtype='uint8')
-
-        self.trk_pic = mpimg.imread(trk_pic_file)  # beolvassa a pályát
+        # beolvassa a pályát
+        self.trk_pic = mpimg.imread(trk_pic_file)
         self.trk = rgb2gray(self.trk_pic)  # szürkeárnyalatosban dolgozunk
-        self.trk_col = trk_col  # trk_pic-en a pálya színe
-        self.steps = 0  # az eddig megtett lépések száma
 
         self.col_in = rgb2gray(np.reshape(np.array(self.track_inside_color), (1, 1, 3)))[0, 0]
         self.col_out = rgb2gray(np.reshape(np.array(self.track_outside_color), (1, 1, 3)))[0, 0]
@@ -66,25 +61,17 @@ class PaperRaceEnv:
         # Ha be van kapcsolva az autó véletlen pozícióból való indítása, random szakaszból indulunk
         self.random_init = random_init
 
-        # Az első szakasz a sectionban, lesz a startvonal
-        self.sections = sections
-
-        self.startendsections = sections
         # A kezdo pozicio a startvonal fele, es onnan 1-1 pixellel "arrebb" Azert hogy ne legyen a startvonal es a
         # kezdeti sebesseg metszo.
         # ezen a ponton section_nr = 0, az elso szakasz a listaban (sections) a startvonal
-        start_line = sections[0]
-        #ez valmiert igy volt, egyelore igy hagyom...
-        self.start_line = start_line
-
         # A startvonalra meroleges iranyvektor:
-        e_start_x = int(np.floor((start_line[0] - start_line[2])))
-        e_start_y = int(np.floor((start_line[1] - start_line[3])))
+        e_start_x = int(np.floor((self.start_line[0] - self.start_line[2])))
+        e_start_y = int(np.floor((self.start_line[1] - self.start_line[3])))
         self.e_start_spd = np.array([e_start_y, -e_start_x]) / np.linalg.norm(np.array([e_start_y, -e_start_x]))
 
         # A startvonal közepe:
-        self.start_x = int(np.floor((start_line[0] + start_line[2]) / 2))
-        self.start_y = int(np.floor((start_line[1] + start_line[3]) / 2))
+        self.start_x = int(np.floor((self.start_line[0] + self.start_line[2]) / 2))
+        self.start_y = int(np.floor((self.start_line[1] + self.start_line[3]) / 2))
         # A kezdő pozíció, a startvonal közepétől, a startvonalra merőleges irányba egy picit eltolva:
         self.starting_pos = np.array([self.start_x, self.start_y]) + np.array([int(self.e_start_spd[0] * 10), int(self.e_start_spd[1] * 10)])
 
@@ -110,58 +97,25 @@ class PaperRaceEnv:
 
         self.dists_in = self.__get_dists_in(False) # a kezdőponttól való "távolságot" tárolja a reward fv-hez
         self.dists_out = self.__get_dists_out(False) # a kezdőponttól való "távolságot" tárolja
-        # print("DictIn:", self.dists_in)
-        # print("DictOut:", self.dists_out)
-
-
-        # van egy referencia lepessor ami valahogy beér a célba (palya4) :
-        # self.ref_actions = np.array([0, -180, -95, -95, -90, -95])
-        # self.ref_actions = np.array([0, -180, -96, -97, -110, -105, -105, -105, -110, 110, 110, 100, 50,
-        #                            150, 150, 90, 40, -140, -100, -120, -120, -120, -65, -20, -25, -80,
-        #                           -110, -110, -110, -95])
-        # van egy referencia lepessor ami valahogy beér a célba (palya5) :
-        # self.ref_actions = np.array([0, 150, 180, -160, -160, -160, -150, -90, -90, -110, -110, -120, -110, -110, 0,
-        #                              90, -90, 90, -140, 90, 110, 90, 120, 120, 120, 120, 100, -20, -10, 0, 0, 0, 0])
-
-        # h1.bmp-hez:
-        # #ember által lejátszott lépések: (
-        self.hum_act = (
-        [70, -70, 0, -180, -180, -180, -165, -150, -140, -120, -110, -100, -90, -90, -80, -80, -80, -80, -40, -40, -30,
-         -30, -20, -20, -20, -20, -10, -30], \
-        [90, -90, -50, 100, -180, -180, -180, -160, -150, -140, -110, -100, -90, -90, -80, -70, -70, -70, -60, -40, -20,
-         -20, -20, -20, -10, -10, -10], \
-        [-90, 90, 50, -100, -180, -180, -180, -160, -150, -140, -110, -100, -90, -90, -80, -70, -70, -70, -40, -30, -20,
-         -20, -20, -20, -20, -20], \
-        [70, -70, 0, -180, -180, -180, -165, -155, -150, -130, -110, -100, -90, -90, -80, -70, -60, -60, -40, -40, -30,
-         -20, -20, -20, -20, -20], \
-        [90, -40, -10, -180, -180, -180, -175, -165, -150, -120, -100, -90, -70, -70, -70, -70, -70, -70, -70, -60, -50,
-         -40, -40, -30, -30, -20], \
-        [-180, -180, -180, -180, 0, 80, -80, 0, 0, -175, -165, -150, -150, -100, -90, -70, -70, -70, -80, -80, -70, -50, -50, -40,
-         -30, -30, -30, -30, -20], \
-        [-180, -150, 150, 150, 90, -90, 0, -90, 130, -120, -120, -110, -100, -100, -100, -100, -100, -90, -80, -80, -60,
-         -40, -40, -40, -20, -20, -20, -20, -20], \
-        [-180, -150, -90, 90, 90, 120, 120, -130, -120, -120, -120, -100, -110, -100, -100, -100, -100, -90, -80, -70,
-         -40, -40, -20, -20, -20, -20, -20, -20, -20], \
-        [0, -180, -180, -170, 120, 120, -130, -130, -130, -100, 100, 100, 100, -110, -110, -110, -110, -110, -100, -100,
-         100, 100, -100, -100, -120, -100, -100, 90, 80, -60, 60, -30, -30, -20, -30, -30, -40, -40, -50, -30])
-
-        self.hum_act_gokart = (
-            [-180, -180, -180, -180, -180, 110, -110, 110, -110, 20, 30, -30, -110, -110, 110, 110, -110, -110, -110, -110,
-             -110, -110, -90, 90, 130, -110, -11, -110, -110, -110, 110, -70, 70, -70, 40, 20, -20, -20, -30, -60, 20, -30,
-             -90],
-            [0, 0])
-        self.ref_actions = np.array(self.hum_act[0])
 
         # ehhez van egy init, ami eloallitja a belso iv menten mert elorehaladast minden lepesben
         #self.ref_dist = self.__get_ref_dicts(self.ref_actions)
         self.ref_dist, self.ref_steps = self.__get_ref_dicts(self.ref_actions)
+
+        # refference is made now switched to game car
+        self.set_car(car_name)
+
+    def get_ref_actions(self):
+        # passing track action examples
+        return tracks.get_ref_actions()
 
     # it draws the track to a current plot
     def draw_track(self):
         # pálya kirajzolása
         if use_matplotlib:
             plt.imshow(self.trk_pic)
-        self.draw_sections(self.startendsections, color='orange')
+        self.draw_section(self.start_line, color='orange')
+        self.draw_section(self.end_line, color='orange')
 
     # it draws all section from self section
     def draw_sections(self):
@@ -169,15 +123,21 @@ class PaperRaceEnv:
         for i in range(len(self.sections)):
                 X = np.array([self.sections[i][0], self.sections[i][2]])
                 Y = np.array([self.sections[i][1], self.sections[i][3]])
-                self.draw_section(X, Y, color='blue')
+                self.draw_section_wpoints(X, Y, color='blue')
 
     # it draws all section from self section
     def draw_sections(self, sections, color):
         # Szakaszok kirajzolása
         for i in range(len(sections)):
-            X = np.array([sections[i][0], sections[i][2]])
-            Y = np.array([sections[i][1], sections[i][3]])
-            self.draw_section(X, Y, color=color)
+            section = sections[i]
+            self.draw_section(section, color=color)
+
+    # it draws all section from self section
+    def draw_section(self, section, color):
+        # Szakaszok kirajzolása
+        X = np.array([section[0], section[2]])
+        Y = np.array([section[1], section[3]])
+        self.draw_section_wpoints(X, Y, color=color)
 
     # it clears current plot
     def draw_clear(self):
@@ -185,7 +145,7 @@ class PaperRaceEnv:
             plt.clf()
 
     # it draws a section to current plot
-    def draw_section(self, X, Y, color):
+    def draw_section_wpoints(self, X, Y, color):
         if use_matplotlib:
             plt.plot(X, Y, color=color)
             plt.pause(0.001)
@@ -229,7 +189,7 @@ class PaperRaceEnv:
 
         # meghivjuk a sectionpass fuggvenyt, hogy megkapjuk szakitottunk-e at szakaszt, es ha igen melyiket,
         # es az elmozdulas hanyad reszenel
-        crosses, t2, section_nr = self.sectionpass(pos_old, spd_new)
+        crosses, t2, section_nr, start, end = self.sectionpass(pos_old, spd_new)
 
         # megnezzuk palyan van-e es ha lemegya kkor kint vagy bent:
         step_on_track, inside, outside = self.is_on_track(pos_new)
@@ -391,8 +351,8 @@ class PaperRaceEnv:
             """
 
 
-        # ha barmi miatt az autó megáll, sebesseg zerus, akkor vége
-        if np.array_equal(spd_new, [0, 0]):
+        # ha barmi miatt az autó megáll, sebessege az alábbinál kisebb, akkor vége
+        if sqrt(spd_new[0]**2 + spd_new[1]**2) < 0.01:
             end = True
 
         # Ha akarjuk, akkor itt rajzoljuk ki az aktualis lepes abrajat (lehet maskor kene)
@@ -456,7 +416,7 @@ class PaperRaceEnv:
         return ontrack, inside, outside
 
     def set_car(self, car_name):
-        file = cars.set_car_params(car_name)
+        file = cars.get_car_params(car_name)
         self.gg_pic = mpimg.imread(file)
 
     def gg_action(self, action):
@@ -491,9 +451,11 @@ class PaperRaceEnv:
         return self.gg_actions[action - 1]
 
 
-    def reset(self):
+    def reset(self, drawing = False):
         """ha vmiért vége egy menetnek, meghívódik"""
         # 0-ázza a start poz-tól való távolságot a reward fv-hez
+        self.steps = 0  # az eddig megtett lépések száma
+
         self.prev_dist = 0
 
         """
@@ -523,6 +485,10 @@ class PaperRaceEnv:
         #a kezdo sebesseget a startvonalra merolegesre akarjuk:
         #self.starting_spd = self.starting_spd
 
+        #drawing
+        if drawing:
+            self.draw_clear()
+            self.draw_track()
 
 
     def sectionpass(self, pos, spd):
@@ -544,15 +510,24 @@ class PaperRaceEnv:
         section_nr = 0
         t2 = 0
         crosses = False
+        start = False
+        end = False
 
-        for i in range(len(self.sections)):
-            v1y = self.sections[i][2] - self.sections[i][0]
-            v1z = self.sections[i][3] - self.sections[i][1]
+        if self.sections != None:
+            sections = np.vstack(self.start_line, self.sections)
+            sections = np.vstack(sections, self.end_line)
+        else:
+            sections = np.vstack((self.start_line, self.end_line))
+
+
+        for i in range(len(sections)):
+            v1y = sections[i][2] - sections[i][0]
+            v1z = sections[i][3] - sections[i][1]
             v2y = spd[0]
             v2z = spd[1]
 
-            p1y = self.sections[i][0]
-            p1z = self.sections[i][1]
+            p1y = sections[i][0]
+            p1z = sections[i][1]
             p2y = pos[0]
             p2z = pos[1]
 
@@ -578,15 +553,21 @@ class PaperRaceEnv:
                 cross = (0 < t1) and (t1 < 1) and (0 < t2) and (t2 < 1)
 
                 if cross:
-                    crosses = True
-                    section_nr = i
-                    break
-                else:
-                    crosses = False
-                    t2 = 0
-                    section_nr = 0
-        #print("CR: ",crosses,"t2: ",t2)
-        return crosses, t2, section_nr
+                    if (i > 0 & i < (len(sections) - 1)):
+                        crosses = True
+                        section_nr = i
+                        ret_t2 = t2
+                    elif i == 0:
+                        start = True
+                        ret_t2 = t2
+
+                    elif i == (len(sections)-1):
+                        end = True
+                        ret_t2 = t2
+
+                #print("CR: ",crosses,"t2: ",t2)
+
+        return crosses, ret_t2, section_nr, start, end
 
     def normalize_data(self, data_orig):
         """

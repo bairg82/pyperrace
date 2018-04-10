@@ -1,6 +1,6 @@
 # This stores track's definitions
 
-def set_car_params(car_name):
+def get_car_params(car_name):
     # Setting paramters for given car name
     # adding new track:
     # always add gg_map for a car
