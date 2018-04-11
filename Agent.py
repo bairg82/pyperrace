@@ -13,9 +13,9 @@ class ActorNetwork(object):
     The output layer activation is a tanh to keep the action
     between -action_bound and action_bound
     """
-
-    def __init__(self, sess, state_dim, action_dim, action_bound, learning_rate, tau):
-        with tf.device(used_device):
+,
+    def __init__(self, sess, device, state_dim, action_dim, action_bound, learning_rate, tau):
+        with tf.device(device):
             self.state_dim = state_dim
             self.action_dim = action_dim
             self.action_bound = action_bound
@@ -131,7 +131,7 @@ class CriticNetwork(object):
     The action must be obtained from the output of the Actor network.
     """
 
-    def __init__(self, sess, state_dim, action_dim, learning_rate, tau, gamma, num_actor_vars, used_device):
+    def __init__(self, sess, device, state_dim, action_dim, learning_rate, tau, gamma, num_actor_vars, used_device):
         with tf.device(used_device):
             self.state_dim = state_dim
             self.action_dim = action_dim

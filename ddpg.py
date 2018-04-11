@@ -358,12 +358,12 @@ def main(args):
         # Ensure action bound is symmetric
         # assert (env.action_space.high == -env.action_space.low)
 
-        actor = ActorNetwork(sess, state_dim, action_dim, action_bound,
+        actor = Agent.ActorNetwork(sess, used_device, state_dim, action_dim, action_bound,
                              float(args['actor_lr']), float(args['tau']))
 
         print("actor created")
 
-        critic = CriticNetwork(sess, state_dim, action_dim,
+        critic = Agent.CriticNetwork(sess, used_device, state_dim, action_dim,
                                float(args['critic_lr']), float(args['tau']),
                                float(args['gamma']),
                                actor.get_num_trainable_vars())

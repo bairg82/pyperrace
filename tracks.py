@@ -6,7 +6,8 @@ import numpy as np
 def get_track_params(track_name):
     # Setting paramters for given track name
     # adding new track:
-    # always add startline, endline, sections, track_file, trk_col for a track
+    # always add startline, endline, sections, track_file, trk_col, ref_action for a track
+    # sections is not necessary
     if track_name == 'h1':
         # as hungaroring turn 1
         startline = np.array([200, 220, 200, 50])
@@ -15,7 +16,7 @@ def get_track_params(track_name):
         track_inside_color = np.array([255, 0, 0], dtype='uint8')
         track_outside_color = np.array([255, 255, 255], dtype='uint8')
         track_file = 'h1.bmp'
-        sections = None
+        sections = []
         ref_action = ([70, -70, 0, -180, -180, -180, -165, -150, -140, -120, -110, -100, -90, -90, -80, -80, -80, -80,
                          -40, -40, -30, -30, -20, -20, -20, -20, -10, -30])
 
@@ -32,7 +33,7 @@ def get_track_params(track_name):
         track_inside_color = np.array([255, 0, 0], dtype='uint8')
         track_outside_color = np.array([255, 255, 255], dtype='uint8')
         track_file = 'PALYA3.bmp'
-        ref_action = None
+        ref_action = []
 
     elif track_name == 'palya4':
         # palya4 teljes
@@ -42,7 +43,7 @@ def get_track_params(track_name):
         track_inside_color = np.array([255, 0, 0], dtype='uint8')
         track_outside_color = np.array([255, 255, 255], dtype='uint8')
         track_file = 'PALYA4.bmp'
-        sections = None
+        sections = []
         ref_action = ([0, -180, -96, -97, -110, -105, -105, -105, -110, 110, 110, 100, 50,
                        150, 150, 90, 40, -140, -100, -120, -120, -120, -65, -20, -25, -80,
                        -110, -110, -110, -95])
@@ -61,7 +62,7 @@ def get_track_params(track_name):
         track_inside_color = np.array([255, 0, 0], dtype='uint8')
         track_outside_color = np.array([255, 255, 255], dtype='uint8')
         track_file = 'PALYA5.bmp'
-        sections = None
+        sections = []
         ref_action = ([0, 150, 180, -160, -160, -160, -150, -90, -90, -110, -110, -120, -110, -110, 0,90, -90, 90,
                        -140, 90, 110, 90, 120, 120, 120, 120, 100, -20, -10, 0, 0, 0, 0])
     else:

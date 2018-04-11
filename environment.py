@@ -360,11 +360,11 @@ class PaperRaceEnv:
             # szakasz hatar
             X = np.array([pos_temp_in_old[0], pos_temp_out_old[0]])
             Y = np.array([pos_temp_in_old[1], pos_temp_out_old[1]])
-            self.draw_section(X, Y, color='magenta')
+            self.draw_section_wpoints(X, Y, color='magenta')
 
             X = np.array([pos_old[0], pos_new[0]])
             Y = np.array([pos_old[1], pos_new[1]])
-            self.draw_section(X, Y, color=color)
+            self.draw_section_wpoints(X, Y, color=color)
             if draw_text == 'reward':
                 self.draw_info(draw_info_X, draw_info_Y, 'reward:' + str(int(reward)))
             if draw_text == 'little_reward':
@@ -509,11 +509,12 @@ class PaperRaceEnv:
         """
         section_nr = 0
         t2 = 0
+        ret_t2 = 0
         crosses = False
         start = False
         end = False
 
-        if self.sections != None:
+        if self.sections != []:
             sections = np.vstack(self.start_line, self.sections)
             sections = np.vstack(sections, self.end_line)
         else:
