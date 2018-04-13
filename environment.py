@@ -35,7 +35,10 @@ class PaperRaceEnv:
                  load_env_ref_buffer='', \
                  load_all_env_ref_buffer_dir='',):
 
-        trk_pic_file, self.trk_col, self.track_inside_color, self.track_outside_color, self.start_line, self.end_line, self.sections, self.ref_actions = tracks.get_track_params(track_name)
+        self.car_name = car_name
+        self.track_name = track_name
+
+        trk_pic_file, self.trk_col, self.track_inside_color, self.track_outside_color, self.start_line, self.end_line, self.sections, self.ref_actions = tracks.get_track_params(self.track_name)
 
         if ref_calc == 'default':
             self.set_car('Touring')
@@ -418,6 +421,10 @@ class PaperRaceEnv:
     def set_car(self, car_name):
         file = cars.get_car_params(car_name)
         self.gg_pic = mpimg.imread(file)
+        self.car_name = car_name
+
+    def get_ref_actions(self):
+        return np.array(tracks.get_ref_actions(self.track_name, self.car_name))
 
     def gg_action(self, action):
         # az action-ökhöz tartozó vektor értékek
@@ -470,15 +477,13 @@ class PaperRaceEnv:
             self.section_nr = 0 # kezdetben a 0. szakabol indul a jatek
         # print("SectNr: ", self.section_nr)
 
-        start_line = self.sections[self.section_nr]
-
-        e_start_x = int(np.floor((start_line[0] - start_line[2])))
-        e_start_y = int(np.floor((start_line[1] - start_line[3])))
+        e_start_x = int(np.floor((self.start_line[0] - self.start_line[2])))
+        e_start_y = int(np.floor((self.start_line[1] - self.start_line[3])))
         self.e_start_spd = np.array([e_start_y, -e_start_x]) / np.linalg.norm(np.array([e_start_y, -e_start_x]))
 
         # A startvonal közepe:
-        self.start_x = int(np.floor((start_line[0] + start_line[2]) / 2))
-        self.start_y = int(np.floor((start_line[1] + start_line[3]) / 2))
+        self.start_x = int(np.floor((self.start_line[0] + self.start_line[2]) / 2))
+        self.start_y = int(np.floor((self.start_line[1] + self.start_line[3]) / 2))
         # A kezdő pozíció, a startvonal közepétől, a startvonalra merőleges irányba egy picit eltolva:
         self.starting_pos = np.array([self.start_x, self.start_y]) + np.array([int(self.e_start_spd[0] * 10), int(self.e_start_spd[1] * 10)])
 

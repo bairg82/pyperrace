@@ -53,7 +53,7 @@ def build_summaries():
 #   Agent Training
 # ===========================
 
-def train(sess, env, actor, critic, replay_buffer, max_episodes, max_episode_len, minibatch_size, actor_noise = 'not implemented'):
+def train(sess, env, actor, critic, replay_buffer, max_episodes, max_episode_len, minibatch_size, show_window, save_image_episodes, actor_noise = 'not implemented'):
 # Set up summary Ops
     summary_ops, summary_vars = build_summaries()
 
@@ -82,7 +82,7 @@ def train(sess, env, actor, critic, replay_buffer, max_episodes, max_episode_len
     # osszes tanulas alatt ennyiszer rajzolunk:
 
     # draw_config = 'allepisode'
-    draws = args['save_image_episodes']
+    draws = save_image_episodes
 
     # draw_config = 'perxepisode'
     # draws = 100
@@ -126,7 +126,7 @@ def train(sess, env, actor, critic, replay_buffer, max_episodes, max_episode_len
         # ------------------kornyezet kirajzolasahoz---------------------------------
 
         # draw in this episode
-        if i % draws == 0:
+        if i % draws == 0 or show_window == 'allstep':
             draw = True
         else:
             draw = False
@@ -160,13 +160,15 @@ def train(sess, env, actor, critic, replay_buffer, max_episodes, max_episode_len
         #ennyiedik leestol kezdve random lesz a lepes:
         lepestol = rnd.uniform(0, env.ref_actions.size * (100*i) / max_episodes)
         """
-        lepestol = np.random.uniform(0, env.ref_actions.size * (100*i) / max_episodes, 1)
-
-
-
         # az emberi lepessorok kozul valasszunk egyet veletlenszeruen mint aktualis epizod lepessor:
         #curr_ref_actions = np.array(env.hum_act[int(np.random.uniform(0, int(len(env.hum_act)), 1))])
-        curr_ref_actions = np.array(env.hum_act_gokart[0])
+        #TODO move it to environment
+        curr_ref_actions = env.get_ref_actions()
+
+        lepestol = np.random.uniform(0, curr_ref_actions.size * (100*i) / max_episodes, 1)
+
+
+
 
         # a random lepesekhez a szoras:
         szoras = np.interp(i, ep_for_exp, sig_for_exp)
@@ -202,8 +204,8 @@ def train(sess, env, actor, critic, replay_buffer, max_episodes, max_episode_len
                     step_color = (0, 1, 0)
                     print("\033[92m {}\033[00m".format("        -------uni rand action:"), a)
 
-                if (lepestol < j) and (j < env.ref_actions.size):
-                    a = int(np.random.normal(env.ref_actions[j], 20, size=1))
+                if (lepestol < j) and (j < curr_ref_actions.size):
+                    a = int(np.random.normal(curr_ref_actions[j], 20, size=1))
                     step_color = (1, 0.5, 0)
                 """
                  # a referencia lepessortol elterunk ha az aktualis lepes a kivant tartomanyba esik az epizodon belul
@@ -385,6 +387,8 @@ def main(args):
               max_episodes=int(args['max_episodes']),
               max_episode_len = int(args['max_episode_len']),
               minibatch_size = int(args['minibatch_size']),
+              show_window=args['show_display'],
+              save_image_episodes = int(args['save_image_episodes']),
               actor_noise = actor_noise
               )
 
@@ -422,7 +426,7 @@ if __name__ == '__main__':
     parser.add_argument('--load-env-ref-buffer', help='load env buffer  from this folder', default='./env_ref_buffer/env_ref_buffer_1')
     parser.add_argument('--load-all-env-ref-buffer-dir', help='saving networks to this folder', default='./env_ref_buffer')
     parser.add_argument('--save-graph-episodes', help='save graph in every x epides', default=100)
-    parser.add_argument('--save-image-episodes', help='save image in every x epides', default=100)
+    parser.add_argument('--save-image-episodes', help='save image in every x epides', default=1)
     parser.add_argument('--show-display', help='show env in window', default='allstep')
 
 

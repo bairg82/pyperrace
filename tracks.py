@@ -69,6 +69,7 @@ def get_track_params(track_name):
         raise ValueError('With this name no track is found')
 
     return track_file, trk_col, track_inside_color, track_outside_color, startline, endline, sections, ref_action
+
 def get_ref_actions(track_name, car_name):
     if track_name == 'h1':
         if car_name == 'Touring':
@@ -94,7 +95,7 @@ def get_ref_actions(track_name, car_name):
         elif car_name == 'Gokart':
             stored_actions = ([-180, -180, -180, -180, -180, 110, -110, 110, -110, 20, 30, -30, -110, -110, 110, 110,\
                               -110, -110, -110, -110,-110, -110, -90, 90, 130, -110, -11, -110, -110, -110, 110, -70,\
-                              70, -70, 40, 20, -20, -20, -30, -60, 20, -30, -90],)
+                              70, -70, 40, 20, -20, -20, -30, -60, 20, -30, -90])
         #end Hung turn 1
 
     elif track_name == 'PALYA3':
@@ -114,7 +115,7 @@ def get_ref_actions(track_name, car_name):
     else:
         raise ValueError('With this name no track is found')
 
-    return track_file, trk_col, track_inside_color, startline, endline, sections, ref_action, stored_actions
+    return stored_actions
 
 
 

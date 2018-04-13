@@ -13,7 +13,7 @@ class ActorNetwork(object):
     The output layer activation is a tanh to keep the action
     between -action_bound and action_bound
     """
-,
+
     def __init__(self, sess, device, state_dim, action_dim, action_bound, learning_rate, tau):
         with tf.device(device):
             self.state_dim = state_dim
@@ -131,8 +131,8 @@ class CriticNetwork(object):
     The action must be obtained from the output of the Actor network.
     """
 
-    def __init__(self, sess, device, state_dim, action_dim, learning_rate, tau, gamma, num_actor_vars, used_device):
-        with tf.device(used_device):
+    def __init__(self, sess, device, state_dim, action_dim, learning_rate, tau, gamma, num_actor_vars):
+        with tf.device(device):
             self.state_dim = state_dim
             self.action_dim = action_dim
             self.tau = tau
@@ -165,12 +165,13 @@ class CriticNetwork(object):
             # Network target (y_i)
             self.predicted_q_value = tf.placeholder(tf.float32, [None, 1], name='critc_predicted_q')
 
-            self.learning_rate = tf.placeholder(tf.float32, [None, 1], name='learning_rate')
+            self.learning_rate = learning_rate
+            self.tf_learning_rate = tf.placeholder(tf.float32, name='learning_rate')
 
             # Define loss and optimization Op
             self.loss = tflearn.mean_square(self.predicted_q_value, self.out)
             self.optimize = tf.train.AdamOptimizer(
-                self.learning_rate).minimize(self.loss)
+                learning_rate=self.tf_learning_rate).minimize(self.loss)
 
             # Get the gradient of the net w.r.t. the action.
             # For each action in the minibatch (i.e., for each x in xs),
@@ -226,6 +227,7 @@ class CriticNetwork(object):
             return self.sess.run([self.out, self.optimize], feed_dict={
                 self.inputs: inputs,
                 self.action: action,
+                self.tf_learning_rate: self.learning_rate,
                 self.predicted_q_value: predicted_q_value
             })
 
