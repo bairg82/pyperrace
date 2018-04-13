@@ -30,72 +30,13 @@ import Agent
 from replay_buffer import ReplayBuffer
 
 
-# ===========================
-#   Tensorflow Summary Ops
-# ===========================
-
-def build_summaries():
-    episode_reward = tf.Variable(0., name='reward')
-    tf.summary.scalar("Reward", episode_reward)
-    episode_ave_max_q = tf.Variable(0., name='qmax')
-    tf.summary.scalar("Qmax Value", episode_ave_max_q)
-
-    max_episode_reward = tf.Variable(0., name='reward_max')
-    tf.summary.scalar("Max episode reward Value", max_episode_reward)
-
-    summary_vars = [episode_reward, episode_ave_max_q, max_episode_reward]
-    summary_ops = tf.summary.merge_all()
-
-    return summary_ops, summary_vars
-
 
 # ===========================
 #   Agent Training
 # ===========================
 
-def train(sess, env, actor, critic, replay_buffer, max_episodes, max_episode_len, minibatch_size, show_window, save_image_episodes, actor_noise = 'not implemented'):
+def play_train(env, actor, critic, replay_buffer, max_episodes, max_episode_len, minibatch_size, show_window, save_image_episodes, actor_noise = 'not implemented'):
 # Set up summary Ops
-    summary_ops, summary_vars = build_summaries()
-
-    print("summaries built")
-
-    sess.run(tf.global_variables_initializer())
-
-    # to save all 100th
-    saver = tf.train.Saver(max_to_keep=2)
-
-    # writer = tf.summary.FileWriter((args['summary_dir']))
-    writer = tf.summary.FileWriter(logdir = args['summary_dir'], graph = sess.graph)
-    # writer.close()
-
-    # Initialize target network weights
-    actor.update_target_network()
-    print("target actor initialised")
-    critic.update_target_network()
-    print("target critic initialised")
-
-    # ----------------------------
-
-    # nem minden epizodot fogunk kirajzolni, mert lassú. Lásd később
-    # draws = 1
-
-    # osszes tanulas alatt ennyiszer rajzolunk:
-
-    # draw_config = 'allepisode'
-    draws = save_image_episodes
-
-    # draw_config = 'perxepisode'
-    # draws = 100
-
-    # draw_config = 'maxdrawsx'
-    # draws_per_fullepisodes = max(1, max_episodes / draws_per_fullepisodes)
-
-    # draws_config = 'drawnothing'
-    # draws = 0
-
-    # where to draw
-    draw_where = {'window': True, 'file': True}
-
     # ----------------------------
 
     # az emberi jatekokat bele kell "keverni" majd, mint experience. Hogy a teljes tanitásra szánt epizodok alatt
@@ -126,7 +67,7 @@ def train(sess, env, actor, critic, replay_buffer, max_episodes, max_episode_len
         # ------------------kornyezet kirajzolasahoz---------------------------------
 
         # draw in this episode
-        if i % draws == 0 or show_window == 'allstep':
+        if i % save_image_episodes == 0 or show_window == 'allstep':
             draw = True
         else:
             draw = False
@@ -134,11 +75,7 @@ def train(sess, env, actor, critic, replay_buffer, max_episodes, max_episode_len
         # alapállapotba hozzuk a környezetet
         env.reset(draw)
 
-        # kezdeti sebeesseg, ahogy a kornyezet adja
-        v = np.array(env.starting_spd)
-
-        # sebesség mellé a kezdeti poz. is kell. Ez a kezdőpozíció beállítása:
-        pos = np.array(env.starting_pos)
+        pos, v = env.start()
 
         # kezdeti teljes epzód alatt szerzett jutalom, és legjobb q étrék:
         ep_reward = 0
@@ -162,7 +99,6 @@ def train(sess, env, actor, critic, replay_buffer, max_episodes, max_episode_len
         """
         # az emberi lepessorok kozul valasszunk egyet veletlenszeruen mint aktualis epizod lepessor:
         #curr_ref_actions = np.array(env.hum_act[int(np.random.uniform(0, int(len(env.hum_act)), 1))])
-        #TODO move it to environment
         curr_ref_actions = env.get_ref_actions()
 
         lepestol = np.random.uniform(0, curr_ref_actions.size * (100*i) / max_episodes, 1)
@@ -338,66 +274,51 @@ def train(sess, env, actor, critic, replay_buffer, max_episodes, max_episode_len
 
 
 def main(args):
-    with tf.Session() as sess:
+    # GG1.bmp is used for reward function
+    env = PaperRaceEnv('h1', ref_calc = 'default', car_name='Touring', random_init=False, \
+                       save_env_ref_buffer_dir=args['save_env_ref_buffer_dir'],\
+                       save_env_ref_buffer_name=args['save_env_ref_buffer_name'],\
+                       load_env_ref_buffer=args['load_env_ref_buffer'],\
+                       load_all_env_ref_buffer_dir=args['load_all_env_ref_buffer_dir'])
 
-        # GG1.bmp is used for reward function
-        env = PaperRaceEnv('h1', ref_calc = 'default', car_name='Touring', random_init=False, \
-                           save_env_ref_buffer_dir=args['save_env_ref_buffer_dir'],\
-                           save_env_ref_buffer_name=args['save_env_ref_buffer_name'],\
-                           load_env_ref_buffer=args['load_env_ref_buffer'],\
-                           load_all_env_ref_buffer_dir=args['load_all_env_ref_buffer_dir'])
+    # changing environment gg map
+    env.set_car('Gokart')
 
-        # changing environment gg map
-        env.set_car('Gokart')
+    state_dim = 4  # [vx, vy, posx, posy]
+    action_dim = 1  # szam (fok) ami azt jelenti hogy a gg diagramon melikiranyba gyorsulunk
+    action_bound = 180  # 0: egyenesen -180,180: fék, -90: jobbra kanyar
+    # Ensure action bound is symmetric
+    # assert (env.action_space.high == -env.action_space.low)
 
-        np.random.seed(int(args['random_seed']))
-        tf.set_random_seed(int(args['random_seed']))
-        #env.seed(int(args['random_seed']))
+    agent = Agent.ActorCritic(state_dim, action_dim, action_bound, used_device)
 
-        state_dim = 4 #[vx, vy, posx, posy]
-        action_dim = 1 #szam (fok) ami azt jelenti hogy a gg diagramon melikiranyba gyorsulunk
-        action_bound = 180 #0: egyenesen -180,180: fék, -90: jobbra kanyar
-        # Ensure action bound is symmetric
-        # assert (env.action_space.high == -env.action_space.low)
+    # setting random seed
+    agent.set_random_seed(int(args['random_seed']))
+    # also for the environment
+    np.random.seed(int(args['random_seed']))
 
-        actor = Agent.ActorNetwork(sess, used_device, state_dim, action_dim, action_bound,
-                             float(args['actor_lr']), float(args['tau']))
+    # Initialize replay memory
+    replay_buffer = ReplayBuffer(buffer_size = int(args['buffer_size']), \
+                                 random_seed = int(args['random_seed']))
 
-        print("actor created")
+    replay_buffer.load(load_file=args['load_experince_name'], \
+                       load_all_dir=args['load_all_experince_dir'])
 
-        critic = Agent.CriticNetwork(sess, used_device, state_dim, action_dim,
-                               float(args['critic_lr']), float(args['tau']),
-                               float(args['gamma']),
-                               actor.get_num_trainable_vars())
+    play_train(env, actor, critic, replay_buffer,
+          max_episodes=int(args['max_episodes']),
+          max_episode_len = int(args['max_episode_len']),
+          minibatch_size = int(args['minibatch_size']),
+          show_window=args['show_display'],
+          save_image_episodes = int(args['save_image_episodes']),
+          actor_noise = actor_noise
+          )
 
-        print("critic created")
+    replay_buffer.save(save_dir = args['save_experience_dir'], \
+                       save_name = args['save_experience_name'])
 
-        actor_noise = Agent.OrnsteinUhlenbeckActionNoise(mu=np.zeros(action_dim))
-
-        print("actor noise created")
-
-        # Initialize replay memory
-        replay_buffer = ReplayBuffer(buffer_size = int(args['buffer_size']), \
-                                     random_seed = int(args['random_seed']))
-
-        replay_buffer.load(load_file=args['load_experince_name'], \
-                           load_all_dir=args['load_all_experince_dir'])
-
-        train(sess, env, actor, critic, replay_buffer,
-              max_episodes=int(args['max_episodes']),
-              max_episode_len = int(args['max_episode_len']),
-              minibatch_size = int(args['minibatch_size']),
-              show_window=args['show_display'],
-              save_image_episodes = int(args['save_image_episodes']),
-              actor_noise = actor_noise
-              )
-
-        replay_buffer.save(save_dir = args['save_experience_dir'], \
-                           save_name = args['save_experience_name'])
-
-        #cleaning
-        replay_buffer.clear()
-        env.clean()
+    #cleaning
+    replay_buffer.clear()
+    env.clean()
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='provide arguments for DDPG agent')

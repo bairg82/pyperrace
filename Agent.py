@@ -282,3 +282,63 @@ class OrnsteinUhlenbeckActionNoise:
 
     def __repr__(self):
         return 'OrnsteinUhlenbeckActionNoise(mu={}, sigma={})'.format(self.mu, self.sigma)
+
+class ActorCritic(object):
+    def __init__(self, state_dim, action_dim, action_bound, device):
+        with tf.Session() as self.sess:
+
+        self.actor = ActorNetwork(self.sess, device, state_dim, action_dim, action_bound,
+                                   float(args['actor_lr']), float(args['tau']))
+
+        print("actor created")
+
+        self.critic = CriticNetwork(self.sess, device, state_dim, action_dim,
+                                     float(args['critic_lr']), float(args['tau']),
+                                     float(args['gamma']),
+                                     self.actor.get_num_trainable_vars())
+
+        print("critic created")
+
+        self.actor_noise = OrnsteinUhlenbeckActionNoise(mu=np.zeros(action_dim))
+
+        print("actor noise created")
+
+        self.build_summaries()
+
+        print("summaries built")
+
+        sess.run(tf.global_variables_initializer())
+
+        # to save all 100th
+        saver = tf.train.Saver(max_to_keep=2)
+
+        # Initialize target network weights
+        actor.update_target_network()
+        print("target actor initialised")
+        self.critic.update_target_network()
+        print("target critic initialised")
+
+    def train(self):
+
+    def play(self):
+
+    def set_random_seed(self, random_seed):
+        tf.set_random_seed(random_seed)
+
+    # ===========================
+    #   Tensorflow Summary Ops
+    # ===========================
+
+    def build_summaries(self, logdir, graph):
+        episode_reward = tf.Variable(0., name='reward')
+        tf.summary.scalar("Reward", episode_reward)
+        episode_ave_max_q = tf.Variable(0., name='qmax')
+        tf.summary.scalar("Qmax Value", episode_ave_max_q)
+
+        max_episode_reward = tf.Variable(0., name='reward_max')
+        tf.summary.scalar("Max episode reward Value", max_episode_reward)
+
+        self.summary_vars = [episode_reward, episode_ave_max_q, max_episode_reward]
+        self.summary_ops = tf.summary.merge_all()
+
+        self.log_writer = tf.summary.FileWriter(logdir=logdir, graph=graph)

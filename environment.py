@@ -108,6 +108,8 @@ class PaperRaceEnv:
         # refference is made now switched to game car
         self.set_car(car_name)
 
+        self.players = []
+
     def get_ref_actions(self):
         # passing track action examples
         return tracks.get_ref_actions()
@@ -495,6 +497,15 @@ class PaperRaceEnv:
             self.draw_clear()
             self.draw_track()
 
+        # jatek inditasa
+    def start(self):
+        # kezdeti sebeesseg, ahogy a kornyezet adja
+        v = np.array(self.starting_spd)
+
+        # sebesség mellé a kezdeti poz. is kell. Ez a kezdőpozíció beállítása:
+        pos = np.array(self.starting_pos)
+
+        return pos, v
 
     def sectionpass(self, pos, spd):
         """
@@ -1078,3 +1089,14 @@ class PaperRaceEnv:
     def clean(self):
         self.ref_buffer_save()
         del self.ref_buffer
+        del self.players
+
+    def new_player(self, name, color):
+        new = self.Player(name, color)
+        self.players.append(new)
+
+    class Player(object):
+        def __init__(self, name, color):
+            self.name = name
+            self.color = color
+
