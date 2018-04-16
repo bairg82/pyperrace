@@ -105,10 +105,15 @@ class ActorNetwork(object):
             self.action_gradient: a_gradient
         })
 
-    def predict(self, inputs):
-        return self.sess.run(self.scaled_out, feed_dict={
-            self.inputs: inputs
-        })
+    def predict(self, inputs, add_uncertainity = True):
+        prediction =  self.sess.run(self.scaled_out, feed_dict={
+                self.inputs: inputs})
+
+        if add_uncertainity:
+            return prediction + self.uncertanity()
+
+        return prediction
+
 
     def predict_target(self, inputs):
         return self.sess.run(self.target_scaled_out, feed_dict={
@@ -121,9 +126,9 @@ class ActorNetwork(object):
     def get_num_trainable_vars(self):
         return self.num_trainable_vars
 
-    def save(self, path):
-        self.saver.save(self.sess, path)
-
+    # for learning
+    def uncertanity(self):
+        return np.random.randint(-3, 3, size=1)
 
 class CriticNetwork(object):
     """
@@ -254,9 +259,6 @@ class CriticNetwork(object):
     def update_target_network(self):
         self.sess.run(self.update_target_network_params)
 
-    def save(self, path):
-        self.saver.save(self.sess, path)
-
     def load(self, path):
         self.saver.load(self.sess, path)
 
@@ -284,17 +286,25 @@ class OrnsteinUhlenbeckActionNoise:
         return 'OrnsteinUhlenbeckActionNoise(mu={}, sigma={})'.format(self.mu, self.sigma)
 
 class ActorCritic(object):
-    def __init__(self, state_dim, action_dim, action_bound, device):
-        with tf.Session() as self.sess:
+    def __init__(self, state_dim, action_dim, action_bound, device, actor_lr, critic_lr, tau, gamma, logdir, actor_noise = 'default'):
+        self.sess = tf.Session()
+        #with tf.Session() as self.sess:
+
+        self.state_dim = state_dim
+        self.action_dim = action_dim
+        self.logdir = logdir
+
+        if actor_noise == 'default':
+            self.actor_noise = False
+            # currently not using in network noise
 
         self.actor = ActorNetwork(self.sess, device, state_dim, action_dim, action_bound,
-                                   float(args['actor_lr']), float(args['tau']))
+                                   actor_lr, tau)
 
         print("actor created")
 
         self.critic = CriticNetwork(self.sess, device, state_dim, action_dim,
-                                     float(args['critic_lr']), float(args['tau']),
-                                     float(args['gamma']),
+                                     critic_lr, tau, gamma,
                                      self.actor.get_num_trainable_vars())
 
         print("critic created")
@@ -307,20 +317,51 @@ class ActorCritic(object):
 
         print("summaries built")
 
-        sess.run(tf.global_variables_initializer())
+        self.sess.run(tf.global_variables_initializer())
 
         # to save all 100th
-        saver = tf.train.Saver(max_to_keep=2)
+        self.saver = tf.train.Saver(max_to_keep=2)
 
         # Initialize target network weights
-        actor.update_target_network()
+        self.actor.update_target_network()
         print("target actor initialised")
         self.critic.update_target_network()
         print("target critic initialised")
 
-    def train(self):
+    def learning_rate_provider(self):
+        # TODO more sophiosticated learning rate changing method
+        raise ('Not implemented: learning rate provider')
 
-    def play(self):
+    def train(self, s_batch, a_batch, r_batch, t_batch, s2_batch):
+        # Calculate targets
+        target_q = self.critic.predict_target(s2_batch, self.actor.predict_target(s2_batch))
+
+        y_i = []
+        batch_size = np.size(t_batch)
+        #terminal is a boolen 1d array
+        for k in range(batch_size):
+            if t_batch[k]:
+                y_i.append(r_batch[k])
+            else:
+                y_i.append(r_batch[k] + self.critic.gamma * target_q[k])
+
+        # Update the critic given the targets
+        predicted_q_value, _ = self.critic.train(s_batch, a_batch, np.reshape(y_i, (batch_size, 1)))
+
+        # Update the actor policy using the sampled gradient
+        a_outs = self.actor.predict(s_batch)
+
+        # gradienseket ezzel kiolvassa a tensorflow graph-ból és visszamásolja
+        grads = self.critic.action_gradients(s_batch, a_outs)
+        self.actor.train(s_batch, grads[0])
+
+        # Update target networks
+        self.actor.update_target_network()
+        self.critic.update_target_network()
+        return np.amax(predicted_q_value)
+
+    def save(self, path):
+        self.saver.save(self.sess, path)
 
     def set_random_seed(self, random_seed):
         tf.set_random_seed(random_seed)
@@ -329,7 +370,7 @@ class ActorCritic(object):
     #   Tensorflow Summary Ops
     # ===========================
 
-    def build_summaries(self, logdir, graph):
+    def build_summaries(self):
         episode_reward = tf.Variable(0., name='reward')
         tf.summary.scalar("Reward", episode_reward)
         episode_ave_max_q = tf.Variable(0., name='qmax')
@@ -341,4 +382,13 @@ class ActorCritic(object):
         self.summary_vars = [episode_reward, episode_ave_max_q, max_episode_reward]
         self.summary_ops = tf.summary.merge_all()
 
-        self.log_writer = tf.summary.FileWriter(logdir=logdir, graph=graph)
+        self.log_writer = tf.summary.FileWriter(logdir=self.logdir)
+
+    def update_summaries(self, ep_reward, ep_ave_max_q, best_reward, step):
+        summary_str = self.sess.run(self.summary_ops, feed_dict={
+        self.summary_vars[0]: ep_reward,
+        self.summary_vars[1]: ep_ave_max_q,
+        self.summary_vars[2]: best_reward})
+
+        self.log_writer.add_summary(summary_str, step)
+        self.log_writer.flush()

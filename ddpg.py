@@ -35,7 +35,7 @@ from replay_buffer import ReplayBuffer
 #   Agent Training
 # ===========================
 
-def play_train(env, actor, critic, replay_buffer, max_episodes, max_episode_len, minibatch_size, show_window, save_image_episodes, actor_noise = 'not implemented'):
+def play_train(env, agent, replay_buffer, max_episodes, max_episode_len, minibatch_size, show_window, save_image_episodes, actor_noise = 'not implemented'):
 # Set up summary Ops
     # ----------------------------
 
@@ -59,6 +59,11 @@ def play_train(env, actor, critic, replay_buffer, max_episodes, max_episode_len,
 
     best_reward = -100.0
 
+
+    env.new_player('agent', (1, 0, 0))
+    env.new_player('reference', (0, 0, 1))
+    env.new_player('random', (1, 1, 0))
+
     # ====================
     # Indul egy epizod:
     # ====================
@@ -79,7 +84,7 @@ def play_train(env, actor, critic, replay_buffer, max_episodes, max_episode_len,
 
         # kezdeti teljes epzód alatt szerzett jutalom, és legjobb q étrék:
         ep_reward = 0
-        ep_ave_max_q = 0
+        ep_ave_max_q_cum = 0
         # legjobb elert reward
 
 
@@ -113,7 +118,6 @@ def play_train(env, actor, critic, replay_buffer, max_episodes, max_episode_len,
 
         #egy egy epizódon belül ennyi lépés van maximum:
         for j in range(max_episode_len):
-            step_color = (1, 0, 0)
 
             s = [v[0], v[1], pos[0], pos[1]] #az eredeti kodban s-be van gyujtve az ami a masikban pos és v
 
@@ -133,16 +137,16 @@ def play_train(env, actor, critic, replay_buffer, max_episodes, max_episode_len,
                 # ha nem ért még véget az epizod, de mar a ref lepessor vege, akkor random lepkedunk
                 if j < curr_ref_actions.size:
                     a = int(np.random.normal(curr_ref_actions[j], szoras, 1))  # int(actor.predict(np.reshape(s, (1, actor.state_dim))))
+                    player = 'reference'
                     print("\033[93m {}\033[00m".format("        -------ref action:"), a)
-                    step_color = (0, 0, 1)
                 else:
+                    player = 'random'
                     a = int(np.random.uniform(-180, 180, 1))
-                    step_color = (0, 1, 0)
                     print("\033[92m {}\033[00m".format("        -------uni rand action:"), a)
 
                 if (lepestol < j) and (j < curr_ref_actions.size):
                     a = int(np.random.normal(curr_ref_actions[j], 20, size=1))
-                    step_color = (1, 0.5, 0)
+                    player = 'reference'
                 """
                  # a referencia lepessortol elterunk ha az aktualis lepes a kivant tartomanyba esik az epizodon belul
                 if (lepestol < j) and (j < curr_ref_actions.size):
@@ -160,96 +164,68 @@ def play_train(env, actor, critic, replay_buffer, max_episodes, max_episode_len,
 
             # Jani random lépés
             elif (rand_step is True):
-                step_color = (1, 1, 0)
+                player = 'random'
                 a = int(np.random.uniform(-180, 180))
                 print("\033[94m {}\033[00m".format("        -------full random action:"), a)
             else:
                 # a = int(actor.predict(np.reshape(s, \
                 #                                 (1, actor.state_dim))) + 0 * actor_noise()) + int(np.random.randint(-3, 3, size=1))
-                a = int(actor.predict(np.reshape(s, \
-                                                 (1, actor.state_dim)))) + int(np.random.randint(-3, 3, size=1))
-                step_color = (1, 0, 0)
+                a = int(agent.actor.predict(np.reshape(s, (1, agent.state_dim))))
+                player = 'agent'
                 print("Netwrk action:--------", a)
 
-            a = max(min(a, 180), -180)
-            gg_action = env.gg_action(a)  # action-höz tartozó vektor lekérése
-            #általában ez a fenti két sor egymsor. csak nálunk most így van megírva a környezet, hogy így kell neki beadni az actiont
-            #megnézzük mit mond a környezet az adott álapotban az adott action-ra:
-            #s2, r, terminal, info = env.step(a)
-            v_new, pos_new, reward, end, section_nr = env.step(gg_action, v, pos, draw, \
-                                                               draw_text='little_reward',\
-                                                               color=step_color)
-            t_diff = env.get_time_diff(pos, pos_new, reward, end)
+
+            v_new, pos_new, pos_reward, section_nr = env.step(a, draw, \
+                                                               draw_text='little_reward', player=player)
+
+            end, time_reward, last_reward, last_t_diff = env.getstate()
+
+            # giving reward based on refference:
+            reward_based_on = 'reference'
+
+            if reward_based_on == 'reference':
+                full_reward =  time_reward
+            else:
+                if end
             #megintcsak a kétfelől összemásolgatott küdok miatt, feleltessünkk meg egymásnak változókat:
             s2 = [v_new[0], v_new[1], pos_new[0], pos_new[1]]
-            r = t_diff
+            r = last_t_diff
             terminal = end
-            ep_reward += r
 
             #és akkor a megfeleltetett változókkal már lehet csinálni a replay memory-t:
-            replay_buffer.add(np.reshape(s, (actor.state_dim,)), np.reshape(a, (actor.action_dim,)), r, terminal, \
-                              np.reshape(s2, (actor.state_dim,)))
+            replay_buffer.add(np.reshape(s, (agent.state_dim,)), np.reshape(a, (agent.action_dim,)), r, terminal, \
+                              np.reshape(s2, (agent.state_dim,)))
 
             # Keep adding experience to the memory until there are at least minibatch size samples, És amig a
             # tanulas elejen a random lepkedos fazisban vagyunk.
             if replay_buffer.size() > int(minibatch_size): # and not rand_episode:
                 s_batch, a_batch, r_batch, t_batch, s2_batch = replay_buffer.sample_batch(int(args['minibatch_size']))
 
-                # Calculate targets
-                target_q = critic.predict_target(s2_batch, actor.predict_target(s2_batch))
-
-                y_i = []
-                for k in range(minibatch_size):
-                    if t_batch[k]:
-                        y_i.append(r_batch[k])
-                    else:
-                        y_i.append(r_batch[k] + critic.gamma * target_q[k])
-
-                # Update the critic given the targets
-                predicted_q_value, _ = critic.train(s_batch, a_batch, np.reshape(y_i, (minibatch_size, 1)))
-
-                ep_ave_max_q += np.amax(predicted_q_value)
-
-                # Update the actor policy using the sampled gradient
-                a_outs = actor.predict(s_batch)
-                #TODOdone: emiatt lassu, nem biztos
-                # gradienseket ezzel kiolvassa a tensorflow graph-ból és visszamásolja
-                grads = critic.action_gradients(s_batch, a_outs)
-                actor.train(s_batch, grads[0])
-
-                # Update target networks
-                actor.update_target_network()
-                critic.update_target_network()
-
-            #a kovetkezo lepeshez uj s legyen egyenlo az aktualis es folytatjuk
-            #s = s2
-            v = v_new
-            pos = pos_new
+                ep_ave_max_q_cum += agent.train(s_batch, a_batch, r_batch, t_batch, s2_batch)
 
             lepesek.append(a)
+
             if terminal:
-                #Ha egybol (J=0-nal vege)
-                if j == 0:
-                    j = 1
-                summary_str = sess.run(summary_ops, feed_dict={
-                    summary_vars[0]: ep_reward,
-                    summary_vars[1]: ep_ave_max_q / float(j),
-                    summary_vars[2]: best_reward
-                })
-
-                writer.add_summary(summary_str, i)
-                writer.flush()
-
                 break
             # end of if terminal
-        # end of steps
-        episode_steps.append([i, ep_reward, lepesek])
 
-        print('| Reward: {:.3f} | Episode: {:d} | Qmax: {:.4f}'.format(ep_reward, i, (ep_ave_max_q / float(j))))
+
+        #Ha egybol (J=0-nal vege)
+        if j == 0:
+            ep_ave_max_q = ep_ave_max_q_cum / float(1)
+        else:
+            ep_ave_max_q = ep_ave_max_q_cum / float(j)
+
+        agent.update_summaries(full_reward, ep_ave_max_q, best_reward, i)
+
+        # end of steps
+        episode_steps.append([i, full_reward, lepesek])
+
+        print('| Reward: {:.3f} | Episode: {:d} | Qmax: {:.4f}'.format(full_reward, i, (ep_ave_max_q / float(j))))
 
         # minden századik epizód után legyen mentés
         if i % args['save_graph_episodes'] == 0:
-            saver.save(sess, args['network_dir'] + '/full_network_e' + str(i) + '.tfl')
+            agent.save((args['network_dir'] + '/full_network_e' + str(i) + '.tfl'))
 
             #legjobb mentese
             sorted_list = sorted(episode_steps, key=lambda x: x[1])[-1:]
@@ -263,14 +239,13 @@ def play_train(env, actor, critic, replay_buffer, max_episodes, max_episode_len,
                     file.write(str(sorted_list[0][2][k])+"\033")
 
         # minden x epizód után legyen kép mentés
-        if draw:
-            if draw_where['file']:
-                env.draw_info(400, \
-                              1450, \
-                              '| Reward: {:.3f} | Episode: {:d} | Qmax: {:.4f}'.format(ep_reward, \
-                                                                                       i, \
-                                                                                       (ep_ave_max_q / float(j))))
-                env.draw_save(name='e', count=str(i))
+        if i % save_image_episodes == 0:
+            env.draw_info(400, \
+                          1450, \
+                          '| Reward: {:.3f} | Episode: {:d} | Qmax: {:.4f}'.format(ep_reward, \
+                                                                                   i, \
+                                                                                   (ep_ave_max_q / float(j))))
+            env.draw_save(name='e', count=str(i))
 
 
 def main(args):
@@ -290,7 +265,8 @@ def main(args):
     # Ensure action bound is symmetric
     # assert (env.action_space.high == -env.action_space.low)
 
-    agent = Agent.ActorCritic(state_dim, action_dim, action_bound, used_device)
+    agent = Agent.ActorCritic(state_dim, action_dim, action_bound, used_device, float(args['actor_lr']), \
+                              float(args['critic_lr']), float(args['tau']), float(args['gamma']), logdir=args['network_dir'])
 
     # setting random seed
     agent.set_random_seed(int(args['random_seed']))
@@ -304,13 +280,13 @@ def main(args):
     replay_buffer.load(load_file=args['load_experince_name'], \
                        load_all_dir=args['load_all_experince_dir'])
 
-    play_train(env, actor, critic, replay_buffer,
+    play_train(env, agent, replay_buffer,
           max_episodes=int(args['max_episodes']),
           max_episode_len = int(args['max_episode_len']),
           minibatch_size = int(args['minibatch_size']),
           show_window=args['show_display'],
           save_image_episodes = int(args['save_image_episodes']),
-          actor_noise = actor_noise
+          actor_noise = 'default'
           )
 
     replay_buffer.save(save_dir = args['save_experience_dir'], \
