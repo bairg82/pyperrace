@@ -184,10 +184,11 @@ def play_train(env, agent, replay_buffer, max_episodes, max_episode_len, minibat
             reward_based_on = 'reference'
 
             if reward_based_on == 'reference':
-                full_reward =  time_reward
+                full_reward = time_reward
             else:
-                if end
-            #megintcsak a kétfelől összemásolgatott küdok miatt, feleltessünkk meg egymásnak változókat:
+                if end:
+                    full_reward = pos_reward + 1/k
+                    #megintcsak a kétfelől összemásolgatott küdok miatt, feleltessünkk meg egymásnak változókat:
             s2 = [v_new[0], v_new[1], pos_new[0], pos_new[1]]
             r = last_t_diff
             terminal = end
