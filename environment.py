@@ -43,6 +43,11 @@ class PaperRaceEnv:
         if ref_calc == 'default':
             self.set_car('Touring')
 
+        self.use_ref_time = False
+
+        # 0-ázza a start poz-tól való távolságot a reward fv-hez
+        self.steps = 0  # az eddig megtett lépések száma
+
         # a palya hanyad reszet sikerult teljesiteni
         self.game_pos_reward = 0
         # mennyi az eltelt ido
@@ -52,14 +57,23 @@ class PaperRaceEnv:
         # teljes reward palya megtetele es ido alapjan
         self.game_reward = 0
 
+        self.step_time = 0
+        self.last_step_time = 0
         self.last_step_ref_time_diff = 0
         self.step_ref_time_diff = 0
+        self.step_pos_reward = 0
 
         self.pos_last = 0
         self.v_last = 0
         self.end = False
+        self.finish = False
 
-        self.use_ref_time = False
+        self.section_nr = 0
+
+        self.curr_dist_in = 0
+        self.curr_pos_in = 0
+        self.curr_dist_out = 0
+        self.curr_pos_out = 0
 
         # buffer a már lekért és kiszámolt referenciákra, hogy gyorsabb legyen a lekérés
         self.ref_buffer_dir = save_env_ref_buffer_dir
@@ -135,6 +149,57 @@ class PaperRaceEnv:
         # refference is made now switched to game car
         self.set_car(car_name)
 
+
+    def reset(self, drawing = False):
+        """ha vmiért vége egy menetnek, meghívódik"""
+        # 0-ázza a start poz-tól való távolságot a reward fv-hez
+        self.steps = 0  # az eddig megtett lépések száma
+
+        # a palya hanyad reszet sikerult teljesiteni
+        self.game_pos_reward = 0
+        # mennyi az eltelt ido
+        self.game_time = 0
+        # referenciahoz kepest szamitott reward, regi
+        self.game_ref_reward = 0
+        # teljes reward palya megtetele es ido alapjan
+        self.game_reward = 0
+
+        self.step_time = 0
+        self.last_step_time = 0
+        self.last_step_ref_time_diff = 0
+        self.step_ref_time_diff = 0
+        self.step_pos_reward = 0
+
+        self.pos_last = 0
+        self.v_last = 0
+        self.end = False
+        self.finish = False
+
+        self.section_nr = 0
+
+        self.curr_dist_in = 0
+        self.curr_pos_in = 0
+        self.curr_dist_out = 0
+        self.curr_pos_out = 0
+
+        """
+        # ha a random indítás be van kapcsolva, akkor új kezdő pozíciót választ
+        if self.random_init:
+            self.starting_pos = self.track_indices[randint(0, len(self.track_indices) - 1)]
+            self.prev_dist = self.get_ref_time(self.starting_pos)
+        """
+        if self.random_init:
+            self.section_nr = randint(0, len(self.sections) - 2)
+        else:
+            self.section_nr = 0 # kezdetben a 0. szakabol indul a jatek
+        # print("SectNr: ", self.section_nr)
+
+        self.game_reward = 0
+        #drawing
+        if drawing:
+            self.draw_clear()
+            self.draw_track()
+
     def calc_game_reward(self):
         # calculating gmae raward based on position if not completed
         # if completed then reward based in time
@@ -146,6 +211,7 @@ class PaperRaceEnv:
             self.game_reward = -100.0 + self.game_pos_reward*100.0
 
     def calc_game_ref_time_reward(self):
+        self.game_ref_reward += self.step_ref_time_diff
         return 0
 
     def calc_game_position(self):
@@ -216,59 +282,68 @@ class PaperRaceEnv:
 
         # meghivjuk a sectionpass fuggvenyt, hogy megkapjuk szakitottunk-e at szakaszt, es ha igen melyiket,
         # es az elmozdulas hanyad reszenel
-        crosses, step_time, section_nr, start, finish = self.sectionpass(self.pos_last, self.v)
+
+        # saving variables
+        self.last_step_time = self.step_time
+
+        crosses, self.step_time, section_nr, start, self.finish = self.sectionpass(self.pos_last, self.v)
 
         # megnezzuk palyan van-e es ha lemegya kkor kint vagy bent:
         step_on_track, inside, outside = self.is_on_track(self.pos)
 
         # ha nem ment le elvileg 1, ha lement a palya szeleig eso resz, ha celbaert a celig megtett ido
-        self.game_time += step_time
+        self.game_time += self.step_time
 
         # ===================
         # Lépések:
         # ===================
-        curr_dist_in_old, pos_temp_in_old, curr_dist_out_old, pos_temp_out_old = self.get_ref(self.pos)
 
         # Ha lemegy a palyarol:
         if not step_on_track:
+            last_pos = self.calc_last_point(self.pos_last, self.pos)
+            self.curr_dist_in, self.curr_pos_in, self.curr_dist_out, self.curr_pos_out = self.get_pos_ref_on_side(
+                last_pos)
+
+            self.end = True
+            # print
             # ha atszakit egy szakaszhatart, es ez az utolso is, tehat pont celbaert es ugy esett le a palyarol:
-            if finish:
+            if self.finish:
                 print("\033[91m {}\033[00m" .format("CELBAERT KI"))
-                self.end = True
-                self.game_pos_reward = 0
             else:
                 print("\033[91m {}\033[00m".format("LEMENT"))
-                reward = 1/curr_dist_in
-
-                self.end = True
 
         # Ha nem ment ki a palyarol:
         else:
-
-            # megnezzuk hol jarunk (get_dist.. majd atirni ezt a fugvenyt)
-            # print("PosOld:", pos_old, "PosNew:", pos_new)
-            # megnezzuk, az uj pozicioban hol jarunk:
-            # print(curr_dist_in_old, curr_dist_in_new)
-
-            reward = -1
             # ha a 0. szakaszt, azaz startvonalat szakit at (nem visszafordult hanem eleve visszafele indul):
             if (start):
+                # szamoljunk megtett palyar a kezdo poziciohoz
+                self.curr_dist_in, self.curr_pos_in, self.curr_dist_out, self.curr_pos_out = self.get_pos_ref_on_side(self.starting_pos)
                 print("VISSZAKEZD")
-                reward = -100
-                curr_dist_in = 0.1
                 self.end = True
-
             # ha atszakit egy szakaszhatart, es ez az utolso is, tehat pont celbaert:
-            elif crosses and section_nr == len(self.sections) - 1 and step_on_track:
+            elif self.finish:
                 print("\033[92m {}\033[00m".format("CELBAERT BE"))
-                time = -t2 - 1
-                game_reward = 1/t2
+
                 self.end = True
+            # ha barmi miatt az autó megáll, sebessege az alábbinál kisebb, akkor vége
+            elif sqrt(self.v[0] ** 2 + self.v[1] ** 2) < 0.01:
+                # mivel nem haladt semmit elore az elozo lepes dist-jei maradhatnak
+                self.end = True
+            else:
+                # igy mar lehet megtett palyat szelet nezni
+                self.curr_dist_in, self.curr_pos_in, self.curr_dist_out, self.curr_pos_out = self.get_pos_ref_on_side(
+                    self.pos)
+                self.end = False
 
-        # ha barmi miatt az autó megáll, sebessege az alábbinál kisebb, akkor vége
-        if sqrt(self.v[0]**2 + self.v[1]**2) < 0.01:
-            self.end = True
-
+        # updatating rewards
+        # position based part
+        last_game_pos_reward = self.game_pos_reward
+        self.game_pos_reward = self.calc_game_position()
+        self.step_pos_reward = self.game_pos_reward - last_game_pos_reward
+        # ref time based part
+        self.calc_game_ref_time_reward()
+        self.last_step_ref_time_diff = self.step_ref_time_diff
+        self.step_ref_time_diff = self.get_time_diff(self.pos_last, self.pos, self.step_time, self.end)
 
     def calc_step(self, gg_action):
         #------------------
@@ -297,6 +372,30 @@ class PaperRaceEnv:
         self.v = spd_new
         #------------------
 
+    def draw_step(self, draw_text='reward', info_text_X = 1300, info_text_Y = 1000):
+        curr_dist_in_old, pos_temp_in_old, curr_dist_out_old, pos_temp_out_old = self.get_ref(self.pos)
+        # szakasz hatar
+        X = np.array([pos_temp_in_old[0], pos_temp_out_old[0]])
+        Y = np.array([pos_temp_in_old[1], pos_temp_out_old[1]])
+        self.draw_section_wpoints(X, Y, color='magenta')
+
+        X = np.array([self.pos_last[0], self.pos[0]])
+        Y = np.array([self.pos_last[1], self.pos[1]])
+        self.draw_section_wpoints(X, Y, self.player.color)
+        if draw_text == 'time':
+            self.draw_info(info_text_X, info_text_Y, 'time:' + str(int(self.game_ref_reward)))
+        if draw_text == 'little_time':
+            # a szakasz felezopontjara meroleges vektoron d tavolsagra szoveg kiirasa
+            d = 10
+            tmp1 = (X[1] - X[0]) * 0.5
+            tmp2 = (Y[1] - Y[0]) * 0.5
+            h = d / max(sqrt(tmp1 ** 2 + tmp2 ** 2), 0.01)
+            text_X = X[0] + tmp1 - tmp2 * h
+            text_Y = Y[0] + tmp2 + tmp1 * h
+            self.draw_info(text_X, text_Y, str(self.step_reward))
+        else:
+            self.draw_info(info_text_X, info_text_Y, draw_text)
+
     def step(self, action, draw, draw_text='reward', draw_info_X = 1300, draw_info_Y = 1000, player='default'):
 
         self.player = self.getplayer(player)
@@ -307,45 +406,15 @@ class PaperRaceEnv:
 
         gg_action = self.gg_action(action)
 
-        end = False
-
-        step_time = 0
-
         self.calc_step(gg_action)
 
         self.update_state()
 
         # Ha akarjuk, akkor itt rajzoljuk ki az aktualis lepes abrajat (lehet maskor kene)
         if draw: # kirajzolja az autót
-            # szakasz hatar
-            X = np.array([pos_temp_in_old[0], pos_temp_out_old[0]])
-            Y = np.array([pos_temp_in_old[1], pos_temp_out_old[1]])
-            self.draw_section_wpoints(X, Y, color='magenta')
+            self.draw_step(draw_text, draw_info_X, draw_info_Y)
 
-            X = np.array([self.pos[0], pos_new[0]])
-            Y = np.array([self.pos[1], pos_new[1]])
-            self.draw_section_wpoints(X, Y, self.player.color)
-            if draw_text == 'time':
-                self.draw_info(draw_info_X, draw_info_Y, 'time:' + str(int(reward)))
-            if draw_text == 'little_time':
-                # a szakasz felezopontjara meroleges vektoron d tavolsagra szoveg kiirasa
-                d = 10
-                tmp1 = (X[1]-X[0])*0.5
-                tmp2 = (Y[1]-Y[0])*0.5
-                h = d / max(sqrt(tmp1**2 + tmp2**2), 0.01)
-                text_X = X[0]+tmp1-tmp2*h
-                text_Y = Y[0]+tmp2+tmp1*h
-                self.draw_info(text_X, text_Y, str(time))
-            else:
-                self.draw_info(draw_info_X, draw_info_Y, draw_text)
-
-
-        self.last_t_diff = self.t_diff
-        self.t_diff = self.get_time_diff(self.pos, pos_new, time, self.end)
-        self.game_ref_reward += self.t_diff
-        self.game_pos_reward = reward
-
-        return self.v, self.pos, reward, section_nr
+        return self.v, self.pos, self.step_reward
 
     def getstate(self):
         return self.end, self.t_diff, self.game_reward, self.last_t_diff
@@ -421,57 +490,6 @@ class PaperRaceEnv:
 
         return self.gg_actions[action - 1]
 
-
-    def reset(self, drawing = False):
-        """ha vmiért vége egy menetnek, meghívódik"""
-        # 0-ázza a start poz-tól való távolságot a reward fv-hez
-        self.steps = 0  # az eddig megtett lépések száma
-
-        # a palya hanyad reszet sikerult teljesiteni
-        self.game_pos_reward = 0
-        # mennyi az eltelt ido
-        self.game_time = 0
-        # referenciahoz kepest szamitott reward, regi
-        self.game_ref_reward = 0
-        # teljes reward palya megtetele es ido alapjan
-        self.game_reward = 0
-
-        self.last_step_ref_time_diff = 0
-        self.step_ref_time_diff = 0
-        self.prev_dist = 0
-
-        self.end = False
-        """
-        # ha a random indítás be van kapcsolva, akkor új kezdő pozíciót választ
-        if self.random_init:
-            self.starting_pos = self.track_indices[randint(0, len(self.track_indices) - 1)]
-            self.prev_dist = self.get_ref_time(self.starting_pos)
-        """
-        if self.random_init:
-            self.section_nr = randint(0, len(self.sections) - 2)
-        else:
-            self.section_nr = 0 # kezdetben a 0. szakabol indul a jatek
-        # print("SectNr: ", self.section_nr)
-
-        e_start_x = int(np.floor((self.start_line[0] - self.start_line[2])))
-        e_start_y = int(np.floor((self.start_line[1] - self.start_line[3])))
-        self.e_start_spd = np.array([e_start_y, -e_start_x]) / np.linalg.norm(np.array([e_start_y, -e_start_x]))
-
-        # A startvonal közepe:
-        self.start_x = int(np.floor((self.start_line[0] + self.start_line[2]) / 2))
-        self.start_y = int(np.floor((self.start_line[1] + self.start_line[3]) / 2))
-        # A kezdő pozíció, a startvonal közepétől, a startvonalra merőleges irányba egy picit eltolva:
-        self.starting_pos = np.array([self.start_x, self.start_y]) + np.array([int(self.e_start_spd[0] * 10), int(self.e_start_spd[1] * 10)])
-
-        #a kezdo sebesseget a startvonalra merolegesre akarjuk:
-        #self.starting_spd = self.starting_spd
-
-        self.game_reward = 0
-        #drawing
-        if drawing:
-            self.draw_clear()
-            self.draw_track()
-
         # jatek inditasa
     def start_game(self):
         # kezdeti sebeesseg, ahogy a kornyezet adja
@@ -479,6 +497,8 @@ class PaperRaceEnv:
 
         # sebesség mellé a kezdeti poz. is kell. Ez a kezdőpozíció beállítása:
         self.pos = np.array(self.starting_pos)
+
+        self.curr_dist_in, self.curr_pos_in, self.curr_dist_out, self.curr_pos_out = self.get_pos_ref_on_side(self.pos)
 
         return self.pos, self.v
 
@@ -589,7 +609,7 @@ class PaperRaceEnv:
     # TODO it is used many times
     # there is a better way
     # https://stackoverflow.com/questions/307445/finding-closest-non-black-pixel-in-an-image-fast
-    def get_pos_ref_on_side(self):
+    def get_pos_ref_on_side(self, position):
 
         """Ref adatokat ado fuggveny.
         posision csak palyan levo pont lehet, ha enm akkor hibat fog adni.
@@ -881,6 +901,37 @@ class PaperRaceEnv:
             rew_dt = -remain_time
 
         return rew_dt
+
+    def calc_last_point(self, pos_old, pos_new):
+        # a sebessegvektor iranyaban egyre nagyobb vektorral vizsgalja, hogy mar kint van-e
+        # ha igen az utolso elotti lepes meg bent van ezzel a posicioval ter vissza
+
+        tmp_dist = 1.0
+        v_x = float(pos_new[0] - pos_old[0])
+        v_y = float(pos_new[1] - pos_old[1])
+        v_abs = sqrt(v_x ** 2 + v_y ** 2)
+        dist_x = 0
+        dist_y = 0
+        while tmp_dist < v_abs:
+            dist_x = int(tmp_dist * v_x / v_abs)
+            dist_y = int(tmp_dist * v_y / v_abs)
+            ontrack, inside, outside = self.is_on_track(np.array([pos_old[0] + dist_x, pos_old[1] + dist_y]))
+            if (ontrack is False):
+                break
+            tmp_dist += 1.0
+        # az egyel korabbi tavolsag ertekhez tartozo lesz meg belül
+        tmp_dist -= 1.0
+        try:
+            dist_x = int(tmp_dist * v_x / v_abs)
+            dist_y = int(tmp_dist * v_y / v_abs)
+        except:
+            print('track side calculation error')
+            dist_x = 0
+            dist_y = 0
+
+        # ez az utolso palyan levo pozicio
+        last_pos = np.array([pos_old[0] + dist_x, pos_old[1] + dist_y])
+        return last_pos
 
     def __get_ref_dicts(self, ref_actions):
 

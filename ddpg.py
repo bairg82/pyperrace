@@ -80,7 +80,7 @@ def play_train(env, agent, replay_buffer, max_episodes, max_episode_len, minibat
         # alapállapotba hozzuk a környezetet
         env.reset(draw)
 
-        pos, v = env.start()
+        pos, v = env.start_game()
 
         # kezdeti teljes epzód alatt szerzett jutalom, és legjobb q étrék:
         ep_reward = 0
@@ -174,13 +174,11 @@ def play_train(env, agent, replay_buffer, max_episodes, max_episode_len, minibat
                 player = 'agent'
                 print("Netwrk action:--------", a)
 
-
-            v_new, pos_new, pos_reward, section_nr = env.step(a, draw, \
-                                                               draw_text='little_reward', player=player)
+            v_new, pos_new, pos_reward = env.step(a, draw, draw_text='little_reward', player=player)
 
             end, time_reward, last_reward, last_t_diff = env.getstate()
 
-            # giving reward based on refference:
+            # giving reward based on reference:
             reward_based_on = 'reference'
 
             if reward_based_on == 'reference':
@@ -188,7 +186,7 @@ def play_train(env, agent, replay_buffer, max_episodes, max_episode_len, minibat
             else:
                 if end:
                     full_reward = pos_reward + 1/k
-                    #megintcsak a kétfelől összemásolgatott küdok miatt, feleltessünkk meg egymásnak változókat:
+                    # megintcsak a kétfelől összemásolgatott kodok miatt, feleltessunkk meg egymasnak változókat:
             s2 = [v_new[0], v_new[1], pos_new[0], pos_new[1]]
             r = last_t_diff
             terminal = end
