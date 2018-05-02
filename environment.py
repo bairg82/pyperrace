@@ -128,22 +128,16 @@ class PaperRaceEnv:
         self.prev_pos_in = np.array([0, 0])
         self.prev_pos_out = np.array([0, 0])
 
-        # nincs hasznalva sehol
-        """
-        self.track_indices = [] # a pálya (szürke) pixeleinek pozícióját tartalmazza
-        for x in range(self.trk_pic.shape[1]):
-            for y in range(self.trk_pic.shape[0]):
-                if np.array_equal(self.trk_pic[y, x, :], self.trk_col):
-                    self.track_indices.append([x, y])
-        """
-
         self.dists_in, self.dist_in_max = self.__get_dists_in(False) # a kezdőponttól való "távolságot" tárolja a reward fv-hez
         self.dists_out, self.dist_out_max = self.__get_dists_out(False) # a kezdőponttól való "távolságot" tárolja
 
+        # a referencia megallapitashoz meg ugye nem lehet referenciat hasznalni
+        self.use_ref_time = False
+
         # ehhez van egy init, ami eloallitja a belso iv menten mert elorehaladast minden lepesben
-        #self.ref_dist = self.__get_ref_dicts(self.ref_actions)
         self.ref_dist, self.ref_steps = self.__get_ref_dicts(self.ref_actions)
 
+        #mostmar hasznalhatjuk referencia szerinti diff szamolasokat
         self.use_ref_time = True
 
         # refference is made now switched to game car
@@ -215,7 +209,9 @@ class PaperRaceEnv:
         return 0
 
     def calc_game_position(self):
-        return 0
+        distinrate = self.curr_dist_in/self.dist_in_max
+        distoutrate = self.curr_dist_out/self.dist_out_max
+        return max(distinrate, distoutrate)
 
     def getplayer(self, name = 'default'):
         for player in self.players:
@@ -288,6 +284,10 @@ class PaperRaceEnv:
 
         crosses, self.step_time, section_nr, start, self.finish = self.sectionpass(self.pos_last, self.v)
 
+        # ha szektor hatart nem ert akkor az ido a lepesido
+        if not crosses:
+            self.step_time = 1
+
         # megnezzuk palyan van-e es ha lemegya kkor kint vagy bent:
         step_on_track, inside, outside = self.is_on_track(self.pos)
 
@@ -340,10 +340,12 @@ class PaperRaceEnv:
         last_game_pos_reward = self.game_pos_reward
         self.game_pos_reward = self.calc_game_position()
         self.step_pos_reward = self.game_pos_reward - last_game_pos_reward
-        # ref time based part
-        self.calc_game_ref_time_reward()
-        self.last_step_ref_time_diff = self.step_ref_time_diff
-        self.step_ref_time_diff = self.get_time_diff(self.pos_last, self.pos, self.step_time, self.end)
+
+        if self.use_ref_time:
+            # ref time based part
+            self.calc_game_ref_time_reward()
+            self.last_step_ref_time_diff = self.step_ref_time_diff
+            self.step_ref_time_diff = self.get_time_diff(self.pos_last, self.pos, self.step_time, self.end)
 
     def calc_step(self, gg_action):
         #------------------
@@ -373,7 +375,7 @@ class PaperRaceEnv:
         #------------------
 
     def draw_step(self, draw_text='reward', info_text_X = 1300, info_text_Y = 1000):
-        curr_dist_in_old, pos_temp_in_old, curr_dist_out_old, pos_temp_out_old = self.get_ref(self.pos)
+        curr_dist_in_old, pos_temp_in_old, curr_dist_out_old, pos_temp_out_old = self.get_pos_ref_on_side(self.pos_last)
         # szakasz hatar
         X = np.array([pos_temp_in_old[0], pos_temp_out_old[0]])
         Y = np.array([pos_temp_in_old[1], pos_temp_out_old[1]])
@@ -384,7 +386,7 @@ class PaperRaceEnv:
         self.draw_section_wpoints(X, Y, self.player.color)
         if draw_text == 'time':
             self.draw_info(info_text_X, info_text_Y, 'time:' + str(int(self.game_ref_reward)))
-        if draw_text == 'little_time':
+        if draw_text == 'little_time' or draw_text == 'little_reward':
             # a szakasz felezopontjara meroleges vektoron d tavolsagra szoveg kiirasa
             d = 10
             tmp1 = (X[1] - X[0]) * 0.5
@@ -392,7 +394,10 @@ class PaperRaceEnv:
             h = d / max(sqrt(tmp1 ** 2 + tmp2 ** 2), 0.01)
             text_X = X[0] + tmp1 - tmp2 * h
             text_Y = Y[0] + tmp2 + tmp1 * h
-            self.draw_info(text_X, text_Y, str(self.step_reward))
+            if draw_text == 'little_time':
+                self.draw_info(text_X, text_Y, str(self.step_ref_time_diff))
+            elif draw_text == 'little_reward':
+                self.draw_info(text_X, text_Y, str(self.step_pos_reward))
         else:
             self.draw_info(info_text_X, info_text_Y, draw_text)
 
@@ -414,10 +419,10 @@ class PaperRaceEnv:
         if draw: # kirajzolja az autót
             self.draw_step(draw_text, draw_info_X, draw_info_Y)
 
-        return self.v, self.pos, self.step_reward
+        return self.v, self.pos, self.step_pos_reward
 
     def getstate(self):
-        return self.end, self.t_diff, self.game_reward, self.last_t_diff
+        return self.end, self.step_time, self.step_ref_time_diff, self.game_reward, self.game_ref_reward
 
 
     def is_on_track(self, pos):
@@ -951,10 +956,10 @@ class PaperRaceEnv:
             #nye = input('Give input')
             action = self.ref_actions[i]
             print(action)
-            v_new, pos_new, reward, section_nr = self.step(action, draw=True, draw_text='')
+            v_new, pos_new, reward = self.step(action, draw=True, draw_text='')
             curr_dist_in, pos_in, curr_dist_out, pos_out = self.get_pos_ref_on_side(pos_new)
             ref_dist[i] = curr_dist_in
-            ref_steps[i] = -self.game_reward
+            ref_steps[i] = self.game_time
 
         print(ref_dist)
         print(ref_steps)

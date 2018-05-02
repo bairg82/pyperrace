@@ -176,16 +176,16 @@ def play_train(env, agent, replay_buffer, max_episodes, max_episode_len, minibat
 
             v_new, pos_new, pos_reward = env.step(a, draw, draw_text='little_reward', player=player)
 
-            end, time_reward, last_reward, last_t_diff = env.getstate()
+            end, time, last_t_diff, game_pos_reward, game_ref_reward = env.getstate()
 
             # giving reward based on reference:
-            reward_based_on = 'reference'
+            reward_based_on = ''
 
             if reward_based_on == 'reference':
-                full_reward = time_reward
+                full_reward = game_ref_reward
             else:
                 if end:
-                    full_reward = pos_reward + 1/k
+                    full_reward = game_pos_reward
                     # megintcsak a kétfelől összemásolgatott kodok miatt, feleltessunkk meg egymasnak változókat:
             s2 = [v_new[0], v_new[1], pos_new[0], pos_new[1]]
             r = last_t_diff
