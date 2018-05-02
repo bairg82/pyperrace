@@ -179,7 +179,7 @@ def play_train(env, agent, replay_buffer, max_episodes, max_episode_len, minibat
             end, time, last_t_diff, game_pos_reward, game_ref_reward = env.getstate()
 
             # giving reward based on reference:
-            reward_based_on = 'reference'
+            reward_based_on = ''
 
             if reward_based_on == 'reference':
                 full_reward = game_ref_reward
@@ -321,9 +321,9 @@ if __name__ == '__main__':
     parser.add_argument('--save-env-ref-buffer-name', help='saving and loading ref buffer from this dir', default='env_ref_buffer_1')
     parser.add_argument('--load-env-ref-buffer', help='load env buffer  from this folder', default='./env_ref_buffer/env_ref_buffer_1')
     parser.add_argument('--load-all-env-ref-buffer-dir', help='saving networks to this folder', default='./env_ref_buffer')
-    parser.add_argument('--save-graph-episodes', help='save graph in every x epides', default=100)
-    parser.add_argument('--save-image-episodes', help='save image in every x epides', default=1)
-    parser.add_argument('--show-display', help='show env in window', default='allstep')
+    parser.add_argument('--save-graph-episodes', help='save graph in every x epides', default=1000)
+    parser.add_argument('--save-image-episodes', help='save image in every x epides', default=100)
+    parser.add_argument('--show-display', help='show env in window', default='')
 
 
     parser.set_defaults(render_env=True)
