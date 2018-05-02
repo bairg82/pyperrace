@@ -94,7 +94,7 @@ def get_ref_actions(track_name, car_name):
              100, 100, -100, -100, -120, -100, -100, 90, 80, -60, 60, -30, -30, -20, -30, -30, -40, -40, -50, -30])
         elif car_name == 'Gokart':
             stored_actions = ([-180, -180, -180, -180, -180, 110, -110, 110, -110, 20, 30, -30, -110, -110, 110, 110,\
-                              -110, -110, -110, -110,-110, -110, -90, 90, 130, -110, -11, -110, -110, -110, 110, -70,\
+                              -110, -110, -110, -110, -110, -110, -90, 90, 130, -110, -11, -110, -110, -110, 110, -70,\
                               70, -70, 40, 20, -20, -20, -30, -60, 20, -30, -90])
         #end Hung turn 1
 
@@ -115,7 +115,7 @@ def get_ref_actions(track_name, car_name):
     else:
         raise ValueError('With this name no track is found')
 
-    return stored_actions
+    return np.array(stored_actions)
 
 
 

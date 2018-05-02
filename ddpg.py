@@ -103,10 +103,10 @@ def play_train(env, agent, replay_buffer, max_episodes, max_episode_len, minibat
         lepestol = rnd.uniform(0, env.ref_actions.size * (100*i) / max_episodes)
         """
         # az emberi lepessorok kozul valasszunk egyet veletlenszeruen mint aktualis epizod lepessor:
-        #curr_ref_actions = np.array(env.hum_act[int(np.random.uniform(0, int(len(env.hum_act)), 1))])
-        curr_ref_actions = env.get_ref_actions()
+        curr_ref_actions = env.get_random_ref_actions()
+        size_curr_ref_actions = len(curr_ref_actions)
 
-        lepestol = np.random.uniform(0, curr_ref_actions.size * (100*i) / max_episodes, 1)
+        lepestol = np.random.uniform(0, size_curr_ref_actions, 1)
 
 
 
@@ -135,7 +135,7 @@ def play_train(env, agent, replay_buffer, max_episodes, max_episode_len, minibat
                     i in range(int(ep_for_exp[4]), int(ep_for_exp[5])))
             if rand_episode:
                 # ha nem ért még véget az epizod, de mar a ref lepessor vege, akkor random lepkedunk
-                if j < curr_ref_actions.size:
+                if j < size_curr_ref_actions:
                     a = int(np.random.normal(curr_ref_actions[j], szoras, 1))  # int(actor.predict(np.reshape(s, (1, actor.state_dim))))
                     player = 'reference'
                     print("\033[93m {}\033[00m".format("        -------ref action:"), a)
@@ -144,7 +144,7 @@ def play_train(env, agent, replay_buffer, max_episodes, max_episode_len, minibat
                     a = int(np.random.uniform(-180, 180, 1))
                     print("\033[92m {}\033[00m".format("        -------uni rand action:"), a)
 
-                if (lepestol < j) and (j < curr_ref_actions.size):
+                if (lepestol < j) and (j < size_curr_ref_actions):
                     a = int(np.random.normal(curr_ref_actions[j], 20, size=1))
                     player = 'reference'
                 """
@@ -179,7 +179,7 @@ def play_train(env, agent, replay_buffer, max_episodes, max_episode_len, minibat
             end, time, last_t_diff, game_pos_reward, game_ref_reward = env.getstate()
 
             # giving reward based on reference:
-            reward_based_on = ''
+            reward_based_on = 'reference'
 
             if reward_based_on == 'reference':
                 full_reward = game_ref_reward
@@ -256,7 +256,7 @@ def main(args):
                        load_all_env_ref_buffer_dir=args['load_all_env_ref_buffer_dir'])
 
     # changing environment gg map
-    env.set_car('Gokart')
+    # env.set_car('Gokart')
 
     state_dim = 4  # [vx, vy, posx, posy]
     action_dim = 1  # szam (fok) ami azt jelenti hogy a gg diagramon melikiranyba gyorsulunk

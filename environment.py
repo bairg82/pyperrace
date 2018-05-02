@@ -220,7 +220,15 @@ class PaperRaceEnv:
 
     def get_ref_actions(self):
         # passing track action examples
-        return tracks.get_ref_actions()
+        return tracks.get_ref_actions(self.track_name, self.car_name)
+
+    def get_random_ref_actions(self):
+        curr_ref_actions = tracks.get_ref_actions(self.track_name, self.car_name)
+        # csak egy referencia lepessor van
+        if curr_ref_actions.shape[0] == 1:
+            return curr_ref_actions
+        else:
+            return curr_ref_actions[int(np.random.uniform(0, int(curr_ref_actions.shape[0]), 1))]
 
     # it draws the track to a current plot
     def draw_track(self):
@@ -340,6 +348,7 @@ class PaperRaceEnv:
         last_game_pos_reward = self.game_pos_reward
         self.game_pos_reward = self.calc_game_position()
         self.step_pos_reward = self.game_pos_reward - last_game_pos_reward
+        self.calc_game_reward()
 
         if self.use_ref_time:
             # ref time based part
@@ -395,9 +404,9 @@ class PaperRaceEnv:
             text_X = X[0] + tmp1 - tmp2 * h
             text_Y = Y[0] + tmp2 + tmp1 * h
             if draw_text == 'little_time':
-                self.draw_info(text_X, text_Y, str(self.step_ref_time_diff))
+                self.draw_info(text_X, text_Y, str('%.3f' % self.step_ref_time_diff))
             elif draw_text == 'little_reward':
-                self.draw_info(text_X, text_Y, str(self.step_pos_reward))
+                self.draw_info(text_X, text_Y, str('% 2.1f' % (self.step_pos_reward * 100)))
         else:
             self.draw_info(info_text_X, info_text_Y, draw_text)
 
@@ -905,7 +914,7 @@ class PaperRaceEnv:
             #print("a kiese helyetol e ref lepessorral hatra levo ido:", remain_time )
             rew_dt = -remain_time
 
-        return rew_dt
+        return -rew_dt
 
     def calc_last_point(self, pos_old, pos_new):
         # a sebessegvektor iranyaban egyre nagyobb vektorral vizsgalja, hogy mar kint van-e
