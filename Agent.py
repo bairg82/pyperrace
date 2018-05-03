@@ -286,13 +286,15 @@ class OrnsteinUhlenbeckActionNoise:
         return 'OrnsteinUhlenbeckActionNoise(mu={}, sigma={})'.format(self.mu, self.sigma)
 
 class ActorCritic(object):
-    def __init__(self, state_dim, action_dim, action_bound, device, actor_lr, critic_lr, tau, gamma, logdir, actor_noise = 'default'):
+    def __init__(self, state_dim, action_dim, action_bound, device, actor_lr, critic_lr, tau, \
+                 gamma, log_dir, network_dir, actor_noise = 'default'):
         self.sess = tf.Session()
         #with tf.Session() as self.sess:
 
         self.state_dim = state_dim
         self.action_dim = action_dim
-        self.logdir = logdir
+        self.log_dir = log_dir
+        self.network_dir = network_dir
 
         if actor_noise == 'default':
             self.actor_noise = False
@@ -360,7 +362,8 @@ class ActorCritic(object):
         self.critic.update_target_network()
         return np.amax(predicted_q_value)
 
-    def save(self, path):
+    def save(self, additional_info):
+        path = self.network_dir + '/full_network_e' + additional_info + '.tfl'
         self.saver.save(self.sess, path)
 
     def set_random_seed(self, random_seed):
@@ -382,7 +385,7 @@ class ActorCritic(object):
         self.summary_vars = [episode_reward, episode_ave_max_q, max_episode_reward]
         self.summary_ops = tf.summary.merge_all()
 
-        self.log_writer = tf.summary.FileWriter(logdir=self.logdir)
+        self.log_writer = tf.summary.FileWriter(logdir=self.log_dir)
 
     def update_summaries(self, ep_reward, ep_ave_max_q, best_reward, step):
         summary_str = self.sess.run(self.summary_ops, feed_dict={

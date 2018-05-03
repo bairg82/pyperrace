@@ -62,6 +62,7 @@ class PaperRaceEnv:
         self.last_step_ref_time_diff = 0
         self.step_ref_time_diff = 0
         self.step_pos_reward = 0
+        self.step_reward = 0
 
         self.pos_last = 0
         self.v_last = 0
@@ -163,6 +164,7 @@ class PaperRaceEnv:
         self.last_step_ref_time_diff = 0
         self.step_ref_time_diff = 0
         self.step_pos_reward = 0
+        self.step_reward = 0
 
         self.pos_last = 0
         self.v_last = 0
@@ -199,7 +201,7 @@ class PaperRaceEnv:
         # if completed then reward based in time
         if self.game_pos_reward == 1.0:
             # if completed the reward is the reciproc of time -> better time means higher points
-            self.game_reward = 0.0 + 1 / self.game_time
+            self.game_reward = 0.0 + 1000 / self.game_time
         else:
             # if not completed -100 point is the minimal point and 0 if finished track
             self.game_reward = -100.0 + self.game_pos_reward*100.0
@@ -209,6 +211,11 @@ class PaperRaceEnv:
         return 0
 
     def calc_game_position(self):
+        # if finish is reached dist maxes can be updated
+        if self.finish:
+            self.dist_in_max = self.curr_dist_in
+            self.dist_out_max = self.curr_dist_out
+
         distinrate = self.curr_dist_in/self.dist_in_max
         distoutrate = self.curr_dist_out/self.dist_out_max
         return max(distinrate, distoutrate)
@@ -292,6 +299,9 @@ class PaperRaceEnv:
 
         crosses, self.step_time, section_nr, start, self.finish = self.sectionpass(self.pos_last, self.v)
 
+        if self.finish:
+            finish_pos = self.pos_last + self.v * self.step_time
+
         # ha szektor hatart nem ert akkor az ido a lepesido
         if not crosses:
             self.step_time = 1
@@ -316,9 +326,9 @@ class PaperRaceEnv:
             # print
             # ha atszakit egy szakaszhatart, es ez az utolso is, tehat pont celbaert es ugy esett le a palyarol:
             if self.finish:
-                print("\033[91m {}\033[00m" .format("CELBAERT KI"))
+                print("\033[91m {}\033[00m" .format("\nCELBAERT KI"))
             else:
-                print("\033[91m {}\033[00m".format("LEMENT"))
+                print("\033[91m {}\033[00m".format("\nLEMENT"))
 
         # Ha nem ment ki a palyarol:
         else:
@@ -326,15 +336,16 @@ class PaperRaceEnv:
             if (start):
                 # szamoljunk megtett palyar a kezdo poziciohoz
                 self.curr_dist_in, self.curr_pos_in, self.curr_dist_out, self.curr_pos_out = self.get_pos_ref_on_side(self.starting_pos)
-                print("VISSZAKEZD")
+                print("\nVISSZAKEZD")
                 self.end = True
+
             # ha atszakit egy szakaszhatart, es ez az utolso is, tehat pont celbaert:
             elif self.finish:
-                print("\033[92m {}\033[00m".format("CELBAERT BE"))
-
+                self.curr_dist_in, self.curr_pos_in, self.curr_dist_out, self.curr_pos_out = self.get_pos_ref_on_side(finish_pos)
+                print("\033[92m {}\033[00m".format("\nCELBAERT BE"))
                 self.end = True
             # ha barmi miatt az autó megáll, sebessege az alábbinál kisebb, akkor vége
-            elif sqrt(self.v[0] ** 2 + self.v[1] ** 2) < 0.01:
+            elif sqrt(self.v[0] ** 2 + self.v[1] ** 2) < 1:
                 # mivel nem haladt semmit elore az elozo lepes dist-jei maradhatnak
                 self.end = True
             else:
@@ -349,6 +360,19 @@ class PaperRaceEnv:
         self.game_pos_reward = self.calc_game_position()
         self.step_pos_reward = self.game_pos_reward - last_game_pos_reward
         self.calc_game_reward()
+
+        #lepes reward a megtett ut, ha lemegy az -100, ha celbaert akkor azert megkapja a jatek pontot
+        if self.end:
+            print('End of game!')
+            print('Reward: ' + '% 3.3f' % self.game_reward + ' Time: ' + '% 3.3f' % self.game_time + \
+                  ' ref_time: ' + '% 3.3f' % self.game_ref_reward)
+            if self.finish:
+                # step reward on finish is distance travelled and time reward
+                self.step_reward = self.step_pos_reward * 100.0 + self.game_reward
+            else:
+                self.step_reward = -100
+        else:
+            self.step_reward = self.step_pos_reward * 100.0
 
         if self.use_ref_time:
             # ref time based part
@@ -412,7 +436,15 @@ class PaperRaceEnv:
 
     def step(self, action, draw, draw_text='reward', draw_info_X = 1300, draw_info_Y = 1000, player='default'):
 
-        self.player = self.getplayer(player)
+        # change player if necessary
+        if player != self.player.name:
+            self.player = self.getplayer(player)
+
+            print('\n  --' + self.player.name + ': ')
+            print('    ' + str(action), end='')
+        else:
+            print(str(action) + ', ', end='')
+        # print("\033[93m {}\033[00m".format("        -------ref action:"), a)
 
         #action = spd_chn
 
@@ -428,7 +460,7 @@ class PaperRaceEnv:
         if draw: # kirajzolja az autót
             self.draw_step(draw_text, draw_info_X, draw_info_Y)
 
-        return self.v, self.pos, self.step_pos_reward
+        return self.v, self.pos, self.step_reward, self.step_pos_reward
 
     def getstate(self):
         return self.end, self.step_time, self.step_ref_time_diff, self.game_reward, self.game_ref_reward
@@ -505,7 +537,13 @@ class PaperRaceEnv:
         return self.gg_actions[action - 1]
 
         # jatek inditasa
-    def start_game(self):
+    def start_game(self, player='last'):
+        print('New game started!')
+        # change player if necessary
+        if (player != self.player.name and player != 'last'):
+            self.player = self.getplayer(player)
+        print('  --' + self.player.name + ': ')
+        print('    ', end='')
         # kezdeti sebeesseg, ahogy a kornyezet adja
         self.v = np.array(self.starting_spd)
 
@@ -515,6 +553,45 @@ class PaperRaceEnv:
         self.curr_dist_in, self.curr_pos_in, self.curr_dist_out, self.curr_pos_out = self.get_pos_ref_on_side(self.pos)
 
         return self.pos, self.v
+
+    # give section with 2 points, a point and a speed vector, if it goes through this sections returns true
+    def check_if_crossed(self, pos, spd, section):
+        v1y = section[2] - section[0]
+        v1z = section[3] - section[1]
+        v2y = spd[0]
+        v2z = spd[1]
+
+        p1y = section[0]
+        p1z = section[1]
+        p2y = pos[0]
+        p2z = pos[1]
+
+        t1=0
+        t2=0
+
+        cross=False
+
+        # mielott vizsgaljuk a metszeseket, gyorsan ki kell zarni, ha a parhuzamosak a vizsgalt szakaszok
+        # ilyenkor 0-val osztas lenne a kepletekben
+        if -v1y * v2z + v1z * v2y == 0:
+            cross = False
+        # Amugy mehetnek a vizsgalatok
+        else:
+            """
+            t2 azt mondja hogy a p1 pontbol v1 iranyba indulva v1 hosszanak hanyadat kell megtenni hogy elerjunk a 
+            metszespontig. Ha t2=1 epp v2vegpontjanal van a metszespopnt. t1,ugyanez csak p1 es v2-vel.
+            """
+            t2 = (-v1y * p1z + v1y * p2z + v1z * p1y - v1z * p2y) / (-v1y * v2z + v1z * v2y)
+            t1 = (p1y * v2z - p2y * v2z - v2y * p1z + v2y * p2z) / (-v1y * v2z + v1z * v2y)
+
+            """
+            Annak eldontese hogy akkor az egyenesek metszespontja az most a
+            szakaszokon belulre esik-e: Ha mindket t, t1 es t2 is kisebb mint 1 és
+            nagyobb mint 0
+            """
+            cross = (0 < t1) and (t1 < 1) and (0 < t2) and (t2 < 1)
+
+        return cross, t2
 
     def sectionpass(self, pos, spd):
         """
@@ -535,63 +612,25 @@ class PaperRaceEnv:
         section_nr = 0
         t2 = 0
         ret_t2 = 0
-        crosses = False
-        start = False
-        end = False
+        sc_cross = False
+        start, start_t2 = self.check_if_crossed(pos, spd, self.start_line)
+        end, end_t2 = self.check_if_crossed(pos, spd, self.end_line)
 
+        # ha vannak belso szekciok
         if self.sections != []:
-            sections = np.vstack(self.start_line, self.sections)
-            sections = np.vstack(sections, self.end_line)
-        else:
-            sections = np.vstack((self.start_line, self.end_line))
+            for i in range(self.sections.size[0]):
+                sc_cross, sc_t2 = self.check_if_crossed(pos, spd, self.start_line)
+                if sc_cross:
+                    section_nr = i
+                    ret_t2 = t2
 
+        crosses = start or end or sc_cross
 
-        for i in range(len(sections)):
-            v1y = sections[i][2] - sections[i][0]
-            v1z = sections[i][3] - sections[i][1]
-            v2y = spd[0]
-            v2z = spd[1]
-
-            p1y = sections[i][0]
-            p1z = sections[i][1]
-            p2y = pos[0]
-            p2z = pos[1]
-
-
-            # mielott vizsgaljuk a metszeseket, gyorsan ki kell zarni, ha a parhuzamosak a vizsgalt szakaszok
-            # ilyenkor 0-val osztas lenne a kepletekben
-            if -v1y * v2z + v1z * v2y == 0:
-                crosses = False
-            # Amugy mehetnek a vizsgalatok
-            else:
-                """
-                t2 azt mondja hogy a p1 pontbol v1 iranyba indulva v1 hosszanak hanyadat kell megtenni hogy elerjunk a 
-                metszespontig. Ha t2=1 epp v2vegpontjanal van a metszespopnt. t1,ugyanez csak p1 es v2-vel.
-                """
-                t2 = (-v1y * p1z + v1y * p2z + v1z * p1y - v1z * p2y) / (-v1y * v2z + v1z * v2y)
-                t1 = (p1y * v2z - p2y * v2z - v2y * p1z + v2y * p2z) / (-v1y * v2z + v1z * v2y)
-
-                """
-                Annak eldontese hogy akkor az egyenesek metszespontja az most a
-                szakaszokon belulre esik-e: Ha mindket t, t1 es t2 is kisebb mint 1 és
-                nagyobb mint 0
-                """
-                cross = (0 < t1) and (t1 < 1) and (0 < t2) and (t2 < 1)
-
-                if cross:
-                    if (i > 0 & i < (len(sections) - 1)):
-                        crosses = True
-                        section_nr = i
-                        ret_t2 = t2
-                    elif i == 0:
-                        start = True
-                        ret_t2 = t2
-
-                    elif i == (len(sections)-1):
-                        end = True
-                        ret_t2 = t2
-
-                #print("CR: ",crosses,"t2: ",t2)
+        # nem teljesen jo ha tobb mindent atszakit, de azt nem hasznaljuk meg
+        if end:
+            ret_t2 = end_t2
+        elif start:
+            ret_t2 = start_t2
 
         return crosses, ret_t2, section_nr, start, end
 
@@ -964,8 +1003,7 @@ class PaperRaceEnv:
         for i in steps_nr:
             #nye = input('Give input')
             action = self.ref_actions[i]
-            print(action)
-            v_new, pos_new, reward = self.step(action, draw=True, draw_text='')
+            v_new, pos_new, step_reward, reward = self.step(action, draw=True, draw_text='')
             curr_dist_in, pos_in, curr_dist_out, pos_out = self.get_pos_ref_on_side(pos_new)
             ref_dist[i] = curr_dist_in
             ref_steps[i] = self.game_time

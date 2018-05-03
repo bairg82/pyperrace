@@ -35,19 +35,20 @@ from replay_buffer import ReplayBuffer
 #   Agent Training
 # ===========================
 
-def play_train(env, agent, replay_buffer, max_episodes, max_episode_len, minibatch_size, show_window, save_image_episodes, actor_noise = 'not implemented'):
+def play_train(env, agent, replay_buffer, max_episodes, max_episode_len, minibatch_size, \
+               show_window, save_image_episodes, save_graph_episodes, actor_noise = 'not implemented'):
 # Set up summary Ops
     # ----------------------------
 
     # az emberi jatekokat bele kell "keverni" majd, mint experience. Hogy a teljes tanitásra szánt epizodok alatt
     # mikor, az a lenti matrixban dol el. Minden sor egy szakaszt jelöl, amiben exploration van:
 
-    ep_for_exp = np.array([0, 0.10,
-                           0.15, 0.25,
-                           0.35, 0.45]) * int(args['max_episodes'])
+    ep_for_exp = np.array([0, 0.005,
+                           1.15, 1.25,
+                           1.35, 1.45]) * int(max_episodes)
 
     # Minden sor szam pedig hogy abban a fentiekben megadott intervallumokban mennyiről mennyire csökkenjen a szórás.
-    sig_for_exp = np.array([5, 0,
+    sig_for_exp = np.array([0, 5,
                             10, 0,
                             20, 0])
 
@@ -96,7 +97,7 @@ def play_train(env, agent, replay_buffer, max_episodes, max_episode_len, minibat
         rand_stp_for_exp = (max_episodes - (100 * i)) / max_episodes
         print("Random Step", rand_stp_for_exp)
 
-        rand_stp_for_exp = (int(args['max_episodes']) - (100 * i)) / int(args['max_episodes'])
+        rand_stp_for_exp = (max_episodes - (100 * i)) / max_episodes)
         print("Random Step: ", rand_stp_for_exp)
         
         #ennyiedik leestol kezdve random lesz a lepes:
@@ -138,43 +139,26 @@ def play_train(env, agent, replay_buffer, max_episodes, max_episode_len, minibat
                 if j < size_curr_ref_actions:
                     a = int(np.random.normal(curr_ref_actions[j], szoras, 1))  # int(actor.predict(np.reshape(s, (1, actor.state_dim))))
                     player = 'reference'
-                    print("\033[93m {}\033[00m".format("        -------ref action:"), a)
+
                 else:
                     player = 'random'
                     a = int(np.random.uniform(-180, 180, 1))
-                    print("\033[92m {}\033[00m".format("        -------uni rand action:"), a)
 
                 if (lepestol < j) and (j < size_curr_ref_actions):
                     a = int(np.random.normal(curr_ref_actions[j], 20, size=1))
                     player = 'reference'
-                """
-                 # a referencia lepessortol elterunk ha az aktualis lepes a kivant tartomanyba esik az epizodon belul
-                if (lepestol < j) and (j < curr_ref_actions.size):
-                    a = int(np.random.normal(curr_ref_actions[j], 10, 1))
-                    print("\033[94m {}\033[00m".format("        -------ref norm rand action:"), a)
-                else:#hanyadik lepestol lepunk random: (hogy az elejen meg lehetoleg a referenciat lepje)
-                    if j < env.ref_actions.size:
-                        a = env.ref_actions[j] # int(actor.predict(np.reshape(s, (1, actor.state_dim))))
-                        step_color = (0, 0, 1)
-                        print("\033[93m {}\033[00m" .format("        -------ref action:"), a)
-                    else:
-                        a = int(rnd.uniform(-180, 180))
-                        print("\033[92m {}\033[00m".format("        -------uni rand action:"), a)
-                """
 
             # Jani random lépés
             elif (rand_step is True):
                 player = 'random'
                 a = int(np.random.uniform(-180, 180))
-                print("\033[94m {}\033[00m".format("        -------full random action:"), a)
             else:
                 # a = int(actor.predict(np.reshape(s, \
                 #                                 (1, actor.state_dim))) + 0 * actor_noise()) + int(np.random.randint(-3, 3, size=1))
                 a = int(agent.actor.predict(np.reshape(s, (1, agent.state_dim))))
                 player = 'agent'
-                print("Netwrk action:--------", a)
 
-            v_new, pos_new, pos_reward = env.step(a, draw, draw_text='little_reward', player=player)
+            v_new, pos_new, step_reward, pos_reward = env.step(a, draw, draw_text='little_reward', player=player)
 
             end, time, last_t_diff, game_pos_reward, game_ref_reward = env.getstate()
 
@@ -183,12 +167,14 @@ def play_train(env, agent, replay_buffer, max_episodes, max_episode_len, minibat
 
             if reward_based_on == 'reference':
                 full_reward = game_ref_reward
+                r = last_t_diff
             else:
+                r = step_reward
                 if end:
                     full_reward = game_pos_reward
-                    # megintcsak a kétfelől összemásolgatott kodok miatt, feleltessunkk meg egymasnak változókat:
+
+            # megintcsak a kétfelől összemásolgatott kodok miatt, feleltessunkk meg egymasnak változókat:
             s2 = [v_new[0], v_new[1], pos_new[0], pos_new[1]]
-            r = last_t_diff
             terminal = end
 
             #és akkor a megfeleltetett változókkal már lehet csinálni a replay memory-t:
@@ -198,7 +184,7 @@ def play_train(env, agent, replay_buffer, max_episodes, max_episode_len, minibat
             # Keep adding experience to the memory until there are at least minibatch size samples, És amig a
             # tanulas elejen a random lepkedos fazisban vagyunk.
             if replay_buffer.size() > int(minibatch_size): # and not rand_episode:
-                s_batch, a_batch, r_batch, t_batch, s2_batch = replay_buffer.sample_batch(int(args['minibatch_size']))
+                s_batch, a_batch, r_batch, t_batch, s2_batch = replay_buffer.sample_batch(minibatch_size)
 
                 ep_ave_max_q_cum += agent.train(s_batch, a_batch, r_batch, t_batch, s2_batch)
 
@@ -223,8 +209,8 @@ def play_train(env, agent, replay_buffer, max_episodes, max_episode_len, minibat
         print('| Reward: {:.3f} | Episode: {:d} | Qmax: {:.4f}'.format(full_reward, i, (ep_ave_max_q / float(j))))
 
         # minden századik epizód után legyen mentés
-        if i % args['save_graph_episodes'] == 0:
-            agent.save((args['network_dir'] + '/full_network_e' + str(i) + '.tfl'))
+        if i % save_graph_episodes == 0:
+            agent.save(str(i))
 
             #legjobb mentese
             sorted_list = sorted(episode_steps, key=lambda x: x[1])[-1:]
@@ -265,7 +251,8 @@ def main(args):
     # assert (env.action_space.high == -env.action_space.low)
 
     agent = Agent.ActorCritic(state_dim, action_dim, action_bound, used_device, float(args['actor_lr']), \
-                              float(args['critic_lr']), float(args['tau']), float(args['gamma']), logdir=args['network_dir'])
+                              float(args['critic_lr']), float(args['tau']), float(args['gamma']), \
+                              log_dir= args['summary_dir'], network_dir=args['network_dir'])
 
     # setting random seed
     agent.set_random_seed(int(args['random_seed']))
@@ -279,19 +266,19 @@ def main(args):
     replay_buffer.load(load_file=args['load_experince_name'], \
                        load_all_dir=args['load_all_experince_dir'])
 
-    play_train(env, agent, replay_buffer,
-          max_episodes=int(args['max_episodes']),
-          max_episode_len = int(args['max_episode_len']),
-          minibatch_size = int(args['minibatch_size']),
-          show_window=args['show_display'],
-          save_image_episodes = int(args['save_image_episodes']),
-          actor_noise = 'default'
-          )
+    play_train(env, agent, replay_buffer,\
+          max_episodes=int(args['max_episodes']),\
+          max_episode_len = int(args['max_episode_len']),\
+          minibatch_size = int(args['minibatch_size']),\
+          show_window=args['show_display'],\
+          save_image_episodes = int(args['save_image_episodes']),\
+          save_graph_episodes=int(args['save_graph_episodes']),\
+          actor_noise = 'default')
 
     replay_buffer.save(save_dir = args['save_experience_dir'], \
                        save_name = args['save_experience_name'])
 
-    #cleaning
+    # cleaning
     replay_buffer.clear()
     env.clean()
 
