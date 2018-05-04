@@ -199,7 +199,7 @@ class PaperRaceEnv:
     def calc_game_reward(self):
         # calculating gmae raward based on position if not completed
         # if completed then reward based in time
-        if self.game_pos_reward == 1.0:
+        if self.game_pos_reward >= 0.995:
             # if completed the reward is the reciproc of time -> better time means higher points
             self.game_reward = 0.0 + 1000 / self.game_time
         else:
@@ -218,7 +218,7 @@ class PaperRaceEnv:
 
         distinrate = self.curr_dist_in/self.dist_in_max
         distoutrate = self.curr_dist_out/self.dist_out_max
-        return max(distinrate, distoutrate)
+        return min(distinrate, distoutrate)
 
     def getplayer(self, name = 'default'):
         for player in self.players:
@@ -361,24 +361,41 @@ class PaperRaceEnv:
         self.step_pos_reward = self.game_pos_reward - last_game_pos_reward
         self.calc_game_reward()
 
-        #lepes reward a megtett ut, ha lemegy az -100, ha celbaert akkor azert megkapja a jatek pontot
+        # ha nagyon lassan vagy hatrafele halad szinten legyen vege (egy jo lepes 4-6% ot halad egyenesben
+        if self.step_pos_reward < 0.001:
+            print("\033[92m {}\033[00m".format("\nVege: tul lassu, vagy hatrafele ment!"))
+            self.end = True
+
+        # -------- ! ------ modify self.end before this
+
         if self.end:
             print('End of game!')
             print('Reward: ' + '% 3.3f' % self.game_reward + ' Time: ' + '% 3.3f' % self.game_time + \
                   ' ref_time: ' + '% 3.3f' % self.game_ref_reward)
+
+        self.calc_step_reward()
+
+        if self.use_ref_time:
+           self.calc_ref_time_reward()
+
+    def calc_step_reward(self):
+        # lepes reward a megtett ut, ha lemegy az -100, ha celbaert akkor azert megkapja a jatek pontot
+        if self.end:
             if self.finish:
                 # step reward on finish is distance travelled and time reward
                 self.step_reward = self.step_pos_reward * 100.0 + self.game_reward
             else:
-                self.step_reward = -100
+                # ha lement, tul lassu, visszakezd stb. akkor amit meg a palyan megtett plusz a buntetes
+                # kell a palyan megtett mert ket rossz kozul igy el lehet donteni melyik volt kevesbe rossz -> tanulas
+                self.step_reward = self.step_pos_reward - 100.0
         else:
             self.step_reward = self.step_pos_reward * 100.0
 
-        if self.use_ref_time:
-            # ref time based part
-            self.calc_game_ref_time_reward()
-            self.last_step_ref_time_diff = self.step_ref_time_diff
-            self.step_ref_time_diff = self.get_time_diff(self.pos_last, self.pos, self.step_time, self.end)
+    def calc_ref_time_reward(self):
+        # ref time based part
+        self.calc_game_ref_time_reward()
+        self.last_step_ref_time_diff = self.step_ref_time_diff
+        self.step_ref_time_diff = self.get_time_diff(self.pos_last, self.pos, self.step_time, self.end)
 
     def calc_step(self, gg_action):
         #------------------

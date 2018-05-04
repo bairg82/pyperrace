@@ -49,7 +49,8 @@ sections = np.array([[200, 220, 200, 50],  # [333, 125, 333, 64],[394, 157, 440,
 
 # start_line = np.array([32, 393, 32, 425]) # sigmoid alakú pálya
 
-env = PaperRaceEnv('h1.bmp', trk_col, 'GG1.bmp', sections, random_init=False) # paperrace környezet létrehozása
+# paperrace környezet létrehozása
+env = PaperRaceEnv('h1', ref_calc='default', car_name='Touring', random_init=False)
 mem_size = 100 # a memória mérete, amiből a batch-be válogatunk
 batch_size = 10 # batch mérete, ami a tanítási adatokat tartalmazza
 episodes = 1000 # hányszor fusson a tanítás
@@ -74,6 +75,7 @@ env.gg_pic = mpimg.imread('GG_rally.bmp')
 
 for ep in range(episodes):
     env.reset()
+    env.start_game()
     print("================EP.: ", ep) # epizód számának kiírása
     if draw: # ha rajzolunk
         plt.clf()
@@ -94,10 +96,12 @@ for ep in range(episodes):
 
         if random:
             #action = int(np.random.randint(-180, 180, size=1))
-            lepestol = rnd.uniform(0, env.ref_actions.size)
+            ref_action = env.get_random_ref_actions()
+            ref_length = len(ref_action)
+            lepestol = np.random.uniform(0, ref_length, 1)
             #print(lepestol, env.ref_actions.size)
-            if (lepestol < step) and (step < env.ref_actions.size):
-                action = int(np.random.normal(env.ref_actions[step], 30, size=1))
+            if (lepestol < step) and (step < ref_length):
+                action = int(np.random.normal(ref_action[step], 30, size=1))
                 print("range  rand action: ", action, "-------------")
             else:
                 action = env.ref_actions[step-1]# int(np.random.randint(-180, 180, size=1))
@@ -105,9 +109,9 @@ for ep in range(episodes):
         else:
             action = int(input('Give inut (-180..180 number)'))
             print("manual action: ", action, "-------------")
+        v_new, pos_new, step_reward, pos_reward = env.step(action, True, draw_text='little_reward', player='default')
+        end, time, reward, game_pos_reward, game_ref_reward = env.getstate()
 
-        gg_action = env.gg_action(action)  # action-höz tartozó vektor lekérése
-        v_new, pos_new, reward, end = env.step(gg_action, v, pos, draw, color)
         t_diff = env.get_time_diff(pos, pos_new, reward, end)
         s = [v[0], v[1], pos[0], pos[1]]
         s2 = [v_new[0], v_new[1], pos_new[0], pos_new[1]]

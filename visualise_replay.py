@@ -3,6 +3,7 @@ import replay_buffer
 # create and display image
 import matplotlib.pyplot as plt
 import matplotlib.image as mpimg
+import environment as env
 
 # how many data point is represented
 size = 1000

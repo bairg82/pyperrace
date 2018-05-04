@@ -53,7 +53,7 @@ def play_train(env, agent, replay_buffer, max_episodes, max_episode_len, minibat
                             20, 0])
 
     #Jani véletlenszerű lépés tanulás közben arány
-    rand_stp_normal = 0.001
+    rand_stp_normal = 0.01
 
     # store steps in it
     episode_steps = []
@@ -227,7 +227,7 @@ def play_train(env, agent, replay_buffer, max_episodes, max_episode_len, minibat
         if i % save_image_episodes == 0:
             env.draw_info(400, \
                           1450, \
-                          '| Reward: {:.3f} | Episode: {:d} | Qmax: {:.4f}'.format(ep_reward, \
+                          '| Reward: {:.3f} | Episode: {:d} | Qmax: {:.4f}'.format(full_reward, \
                                                                                    i, \
                                                                                    (ep_ave_max_q / float(j))))
             env.draw_save(name='e', count=str(i))
@@ -310,7 +310,8 @@ if __name__ == '__main__':
     parser.add_argument('--load-all-env-ref-buffer-dir', help='saving networks to this folder', default='./env_ref_buffer')
     parser.add_argument('--save-graph-episodes', help='save graph in every x epides', default=1000)
     parser.add_argument('--save-image-episodes', help='save image in every x epides', default=100)
-    parser.add_argument('--show-display', help='show env in window', default='')
+    parser.add_argument('--show-display', help='show env in window', default='allstep')
+
 
 
     parser.set_defaults(render_env=True)
