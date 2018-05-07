@@ -1,6 +1,6 @@
 "Ez a HPC-s verzio³"
 
-OnHPC = True
+OnHPC = False
 
 use_matplotlib = True
 
@@ -206,9 +206,10 @@ class PaperRaceEnv:
             # if not completed -100 point is the minimal point and 0 if finished track
             self.game_reward = -100.0 + self.game_pos_reward*100.0
 
-    def calc_game_ref_time_reward(self):
+    def calc_game_ref_time_reward(self, remaining_ref_time):
         self.game_ref_reward += self.step_ref_time_diff
-        return 0
+        if self.end:
+            self.game_ref_reward = remaining_ref_time * -2.0
 
     def calc_game_position(self):
         # if finish is reached dist maxes can be updated
@@ -393,9 +394,9 @@ class PaperRaceEnv:
 
     def calc_ref_time_reward(self):
         # ref time based part
-        self.calc_game_ref_time_reward()
         self.last_step_ref_time_diff = self.step_ref_time_diff
-        self.step_ref_time_diff = self.get_time_diff(self.pos_last, self.pos, self.step_time, self.end)
+        self.step_ref_time_diff, remaining_ref_time = self.get_time_diff(self.pos_last, self.pos, self.step_time)
+        self.calc_game_ref_time_reward(remaining_ref_time)
 
     def calc_step(self, gg_action):
         #------------------
@@ -823,7 +824,7 @@ class PaperRaceEnv:
             curr_dist_in = self.dists_in[tuple(pos_in)] # a dist_dict-ből lekérjük a start-tól való távolságát
             curr_dist_out = self.dists_out[tuple(pos_out)] # a dist_dict-ből lekérjük a start-tól való távolságát
         else:
-            raise('out of track, no border found error')
+            raise Exception(pos_in, pos_out, 'out of track, no border found error')
 
         # rakjuk el a bufferba
         self.ref_buffer[tuple(position)] = [curr_dist_in, pos_in, curr_dist_out, pos_out]
@@ -892,7 +893,7 @@ class PaperRaceEnv:
         return reward
     """
 
-    def get_time_diff(self, pos_old, pos_new, act_rew, end):
+    def get_time_diff(self, pos_old, pos_new, act_rew):
         """Reward ado fuggveny. Egy adott lepeshez (pos_old - pos new) ad jutalmat. Eredetileg az volt hogy -1 azaz mint
         mint eltelt idő. Most megnezzuk mivan ha egy referencia lepessorhoz kepest a nyert vagy veszetett ido lesz.
         kb. mint a delta_time channel a MOTEC-ben
@@ -910,67 +911,30 @@ class PaperRaceEnv:
         x = self.ref_dist
         y = self.ref_steps
 
-        if not end:
-            curr_dist_in, curr_pos_in, curr_dist_out, curr_pos_out = self.get_pos_ref_on_side(pos_new)
+        xvals = np.array([pre_dist_in, self.curr_dist_in])
+        # print("elozo es aktualis tav:", xvals)
 
-            xvals = np.array([pre_dist_in, curr_dist_in])
-            # print("elozo es aktualis tav:", xvals)
+        # ezekre a tavolsagokra a referencia lepessor ennyi ido alaptt jutott el
+        yinterp = np.interp(xvals, self.ref_dist, self.ref_steps, 0)
+        # print("ref ennyi ido alatt jutott ezekre:", yinterp)
 
-            # ezekre a tavolsagokra a referencia lepessor ennyi ido alaptt jutott el
-            yinterp = np.interp(xvals, x, y, 0)
-            # print("ref ennyi ido alatt jutott ezekre:", yinterp)
+        # tehat ezt a negyasau lepest a referencia ennyi ido alatt tette meg ugyanezt a palya tavot(- legyen, hogy a kisebb ido legyen a magasabb
+        # reward) :
+        ref_step_time = yinterp[1] - yinterp[0]
+        # print("a ref. ezen lepesnyi ideje:", ref_delta)
 
-            # tehat ezt a negyasau lepest a referencia ennyi ido alatt tette meg (- legyen, hogy a kisebb ido legyen a magasabb
-            # reward) :
-            ref_delta = -yinterp[1] + yinterp[0]
-            # print("a ref. ezen lepesnyi ideje:", ref_delta)
+        # az atualis lepesben az eltelt ido nyilvan -1, illetve ha ido-bunti van akkor ennel tobb, eppen a reward
+        # print("elozo es aktualis lepes kozott eltelt ido:", act_rew)
 
-            # az atualis lepesben az eltelt ido nyilvan -1, illetve ha ido-bunti van akkor ennel tobb, eppen a reward
-            # print("elozo es aktualis lepes kozott eltelt ido:", act_rew)
+        # amenyivel az aktualis ebben a lepesben jobb, azaz kevesebb ido alatt tette meg ezt a elmozdulat, mint a ref
+        # lepessor, az:
+        # ha mint a referencia akkor pozitiv,
+        rew_dt = ref_step_time - act_rew
+        #print("az aktualis, ebben a lepesben megtett tavot ennyivel kevesebb ido alatt tette meg mint a ref. (ha (-) akkor meg több):", rew_dt)
+        # a kieses helyetol a ref lepessorral, hatra levo ido:
+        remain_time = self.ref_steps[-1] - yinterp[1]
 
-            # amenyivel az aktualis ebben a lepesben jobb, azaz kevesebb ido alatt tette meg ezt a elmozdulat, mint a ref
-            # lepessor, az:
-            rew_dt = -ref_delta + act_rew
-            #print("az aktualis, ebben a lepesben megtett tavot ennyivel kevesebb ido alatt tette meg mint a ref. (ha (-) akkor meg több):", rew_dt)
-
-            # Ha kimegyünk a pályáról akkor legyen a reward az hogy mennyi időbe telne onnan ahol kimentünk a referencia
-            # lépéssornak beérni
-        else:
-            #el kell lepkedni az oldposbol az ujposba es ahol eloszor kilep a palyarol abban a pontban kell a rewardot
-            #meghatarozni
-            tmp_dist = 1.0
-            v_x = float(pos_new[0]-pos_old[0])
-            v_y = float(pos_new[1]-pos_old[1])
-            v_abs = sqrt(v_x**2 + v_y**2)
-            dist_x = 0
-            dist_y = 0
-            while tmp_dist < v_abs:
-                dist_x = int(tmp_dist*v_x/v_abs)
-                dist_y = int(tmp_dist*v_y/v_abs)
-                ontrack, inside, outside = self.is_on_track(np.array([pos_old[0]+dist_x, pos_old[1]+dist_y]))
-                if (ontrack is False):
-                    break
-                tmp_dist += 1.0
-            # az egyel korabbi tavolsag ertekhez tartozo lesz meg belül
-            tmp_dist -= 1.0
-            try:
-                dist_x = int(tmp_dist * v_x / v_abs)
-                dist_y = int(tmp_dist * v_y / v_abs)
-            except:
-                print('track side calculation error')
-                dist_x = 0
-                dist_y = 0
-            #ebben a pozicioban kell tavolsagot meghatarozni
-            curr_dist_in, curr_pos_in, curr_dist_out, curr_pos_out = self.get_pos_ref_on_side(np.array([pos_old[0]+dist_x, pos_old[1]+dist_y]))
-
-            # a pre pos-nal a tavolsag: pre_dist_in, itt kell lekerdezni a ref lepessor idejet
-            yinterp = np.interp(curr_dist_in, x, y, 0)
-            # a kieses helyetol a ref lepessorral, hatra levo ido:
-            remain_time = self.ref_steps[-1] - yinterp
-            #print("a kiese helyetol e ref lepessorral hatra levo ido:", remain_time )
-            rew_dt = -remain_time
-
-        return -rew_dt
+        return -rew_dt, remain_time
 
     def calc_last_point(self, pos_old, pos_new):
         # a sebessegvektor iranyaban egyre nagyobb vektorral vizsgalja, hogy mar kint van-e

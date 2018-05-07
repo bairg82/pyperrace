@@ -43,7 +43,7 @@ def play_train(env, agent, replay_buffer, max_episodes, max_episode_len, minibat
     # az emberi jatekokat bele kell "keverni" majd, mint experience. Hogy a teljes tanitásra szánt epizodok alatt
     # mikor, az a lenti matrixban dol el. Minden sor egy szakaszt jelöl, amiben exploration van:
 
-    ep_for_exp = np.array([0, 0.005,
+    ep_for_exp = np.array([10, 1.5,
                            1.15, 1.25,
                            1.35, 1.45]) * int(max_episodes)
 
@@ -51,6 +51,11 @@ def play_train(env, agent, replay_buffer, max_episodes, max_episode_len, minibat
     sig_for_exp = np.array([0, 5,
                             10, 0,
                             20, 0])
+
+
+    pre_train = False
+    pre_trained = False
+    step_train = False
 
     #Jani véletlenszerű lépés tanulás közben arány
     rand_stp_normal = 0.01
@@ -71,7 +76,6 @@ def play_train(env, agent, replay_buffer, max_episodes, max_episode_len, minibat
 
     for i in range(max_episodes):
         # ------------------kornyezet kirajzolasahoz---------------------------------
-
         # draw in this episode
         if i % save_image_episodes == 0 or show_window == 'allstep':
             draw = True
@@ -163,11 +167,14 @@ def play_train(env, agent, replay_buffer, max_episodes, max_episode_len, minibat
             end, time, last_t_diff, game_pos_reward, game_ref_reward = env.getstate()
 
             # giving reward based on reference:
-            reward_based_on = ''
+            reward_based_on = 'reference'
 
             if reward_based_on == 'reference':
                 full_reward = game_ref_reward
-                r = last_t_diff
+                if end:
+                    r = game_ref_reward
+                else:
+                    r = last_t_diff
             else:
                 r = step_reward
                 if end:
@@ -181,12 +188,14 @@ def play_train(env, agent, replay_buffer, max_episodes, max_episode_len, minibat
             replay_buffer.add(np.reshape(s, (agent.state_dim,)), np.reshape(a, (agent.action_dim,)), r, terminal, \
                               np.reshape(s2, (agent.state_dim,)))
 
+            if step_train:
+                if replay_buffer.size() > int(minibatch_size):  # and not rand_episode:
+                    s_batch, a_batch, r_batch, t_batch, s2_batch = replay_buffer.sample_batch(minibatch_size)
+
+                    ep_ave_max_q_cum += agent.train(s_batch, a_batch, r_batch, t_batch, s2_batch)
+
             # Keep adding experience to the memory until there are at least minibatch size samples, És amig a
             # tanulas elejen a random lepkedos fazisban vagyunk.
-            if replay_buffer.size() > int(minibatch_size): # and not rand_episode:
-                s_batch, a_batch, r_batch, t_batch, s2_batch = replay_buffer.sample_batch(minibatch_size)
-
-                ep_ave_max_q_cum += agent.train(s_batch, a_batch, r_batch, t_batch, s2_batch)
 
             lepesek.append(a)
 
@@ -207,6 +216,14 @@ def play_train(env, agent, replay_buffer, max_episodes, max_episode_len, minibat
         episode_steps.append([i, full_reward, lepesek])
 
         print('| Reward: {:.3f} | Episode: {:d} | Qmax: {:.4f}'.format(full_reward, i, (ep_ave_max_q / float(j))))
+        if pre_train:
+            if not pre_trained:
+                pre_trained = True
+                for i in range(1000):
+                    if replay_buffer.size() > int(minibatch_size):  # and not rand_episode:
+                        s_batch, a_batch, r_batch, t_batch, s2_batch = replay_buffer.sample_batch(minibatch_size)
+
+                        ep_ave_max_q_cum += agent.train(s_batch, a_batch, r_batch, t_batch, s2_batch)
 
         # minden századik epizód után legyen mentés
         if i % save_graph_episodes == 0:
@@ -263,8 +280,9 @@ def main(args):
     replay_buffer = ReplayBuffer(buffer_size = int(args['buffer_size']), \
                                  random_seed = int(args['random_seed']))
 
-    replay_buffer.load(load_file=args['load_experince_name'], \
+    replay_loaded = replay_buffer.load(load_file=args['load_experince_name'], \
                        load_all_dir=args['load_all_experince_dir'])
+    print('replay loaded: ' + str(replay_loaded))
 
     play_train(env, agent, replay_buffer,\
           max_episodes=int(args['max_episodes']),\
@@ -275,9 +293,9 @@ def main(args):
           save_graph_episodes=int(args['save_graph_episodes']),\
           actor_noise = 'default')
 
-    replay_buffer.save(save_dir = args['save_experience_dir'], \
-                       save_name = args['save_experience_name'])
-
+    #replay_buffer.save(save_dir = args['save_experience_dir'], \
+    #                   save_name = args['save_experience_name'])
+    #
     # cleaning
     replay_buffer.clear()
     env.clean()
@@ -286,17 +304,17 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='provide arguments for DDPG agent')
 
     # agent parameters
-    parser.add_argument('--actor-lr', help='actor network learning rate',   default=0.0003)
-    parser.add_argument('--critic-lr', help='critic network learning rate', default=0.0005)
+    parser.add_argument('--actor-lr', help='actor network learning rate',   default=0.001)
+    parser.add_argument('--critic-lr', help='critic network learning rate', default=0.00002)
     parser.add_argument('--gamma', help='discount factor for critic updates', default=0.998)
     parser.add_argument('--tau', help='soft target update parameter', default=0.001)
     parser.add_argument('--buffer-size', help='max size of the replay buffer', default=1500000)
-    parser.add_argument('--minibatch-size', help='size of minibatch for minibatch-SGD', default=32)
+    parser.add_argument('--minibatch-size', help='size of minibatch for minibatch-SGD', default=256)
 
     # run parameters
     parser.add_argument('--env', help='choose the gym env- tested on {Pendulum-v0}', default='pyperrace')
     parser.add_argument('--random-seed', help='random seed for repeatability', default=12131)
-    parser.add_argument('--max-episodes', help='max num of episodes to do while training', default=102)
+    parser.add_argument('--max-episodes', help='max num of episodes to do while training', default=100)
     parser.add_argument('--max-episode-len', help='max length of 1 episode', default=40)
     parser.add_argument('--summary-dir', help='directory for storing tensorboard info', default='./results')
     parser.add_argument('--save-experience-dir', help='directory for saving experiences', default='./experience')

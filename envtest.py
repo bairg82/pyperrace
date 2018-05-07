@@ -112,7 +112,7 @@ for ep in range(episodes):
         v_new, pos_new, step_reward, pos_reward = env.step(action, True, draw_text='little_reward', player='default')
         end, time, reward, game_pos_reward, game_ref_reward = env.getstate()
 
-        t_diff = env.get_time_diff(pos, pos_new, reward, end)
+        t_diff, _ = env.get_time_diff(pos, pos_new, reward)
         s = [v[0], v[1], pos[0], pos[1]]
         s2 = [v_new[0], v_new[1], pos_new[0], pos_new[1]]
         a = action

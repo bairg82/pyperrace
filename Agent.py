@@ -386,6 +386,7 @@ class ActorCritic(object):
         self.summary_ops = tf.summary.merge_all()
 
         self.log_writer = tf.summary.FileWriter(logdir=self.log_dir)
+        self.log_writer.add_graph(self.sess.graph)
 
     def update_summaries(self, ep_reward, ep_ave_max_q, best_reward, step):
         summary_str = self.sess.run(self.summary_ops, feed_dict={

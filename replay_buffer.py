@@ -78,6 +78,7 @@ class ReplayBuffer(object):
         np.savez((save_dir+'/'+save_name), s=s_batch, a=a_batch, r=r_batch, t=t_batch, s2=s2_batch,)
 
     def load(self, load_file='experience.npz', load_all_dir = ''):
+        added = 0
         try:
             # no directory is specified then load file with exect path
             if load_all_dir == '':
@@ -85,9 +86,10 @@ class ReplayBuffer(object):
             # load all file in defined directory if specified
             else:
                 for tmp_file_name in os.listdir(load_all_dir):
-                    self.load_from_file(load_all_dir + '/' + tmp_file_name)
+                    added += self.load_from_file(load_all_dir + '/' + tmp_file_name)
         except:
             print('wrong file name or directory')
+        return added
 
 
     def load_from_file(self, file_name):

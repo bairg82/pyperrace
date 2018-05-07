@@ -99,7 +99,7 @@ for ep in range(episodes):
             action = cur_ep_actions[jj]
             gg_action = env.gg_action(action)  # action-höz tartozó vektor lekérése
             v_new, pos_new, reward, end, section_nr = env.step(gg_action, v, pos, False, color)
-            t_diff = env.get_time_diff(pos, pos_new, reward, end)
+            t_diff = env.get_time_diff(pos, pos_new, reward)
             s = [v[0], v[1], pos[0], pos[1]]
             s2 = [v_new[0], v_new[1], pos_new[0], pos_new[1]]
             a = action
