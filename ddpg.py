@@ -43,7 +43,7 @@ def play_train(env, agent, replay_buffer, max_episodes, max_episode_len, minibat
     # az emberi jatekokat bele kell "keverni" majd, mint experience. Hogy a teljes tanitásra szánt epizodok alatt
     # mikor, az a lenti matrixban dol el. Minden sor egy szakaszt jelöl, amiben exploration van:
 
-    ep_for_exp = np.array([10, 1.5,
+    ep_for_exp = np.array([0, 0.005,
                            1.15, 1.25,
                            1.35, 1.45]) * int(max_episodes)
 
@@ -55,7 +55,7 @@ def play_train(env, agent, replay_buffer, max_episodes, max_episode_len, minibat
 
     pre_train = False
     pre_trained = False
-    step_train = False
+    step_train = True
 
     #Jani véletlenszerű lépés tanulás közben arány
     rand_stp_normal = 0.01
@@ -213,7 +213,10 @@ def play_train(env, agent, replay_buffer, max_episodes, max_episode_len, minibat
         agent.update_summaries(full_reward, ep_ave_max_q, best_reward, i)
 
         # end of steps
-        episode_steps.append([i, full_reward, lepesek])
+
+        # episode lepes, info mentes, legjobb kigyujteshez
+        if not rand_episode:
+            episode_steps.append([i, full_reward, lepesek])
 
         print('| Reward: {:.3f} | Episode: {:d} | Qmax: {:.4f}'.format(full_reward, i, (ep_ave_max_q / float(j))))
         if pre_train:
@@ -252,7 +255,7 @@ def play_train(env, agent, replay_buffer, max_episodes, max_episode_len, minibat
 
 def main(args):
     # GG1.bmp is used for reward function
-    env = PaperRaceEnv('h1', ref_calc = 'default', car_name='Touring', random_init=False, \
+    env = PaperRaceEnv('h1', ref_calc = 'default', car_name='Gokart', random_init=False, \
                        save_env_ref_buffer_dir=args['save_env_ref_buffer_dir'],\
                        save_env_ref_buffer_name=args['save_env_ref_buffer_name'],\
                        load_env_ref_buffer=args['load_env_ref_buffer'],\
@@ -293,9 +296,9 @@ def main(args):
           save_graph_episodes=int(args['save_graph_episodes']),\
           actor_noise = 'default')
 
-    #replay_buffer.save(save_dir = args['save_experience_dir'], \
-    #                   save_name = args['save_experience_name'])
-    #
+    replay_buffer.save(save_dir = args['save_experience_dir'], \
+                       save_name = args['save_experience_name'])
+
     # cleaning
     replay_buffer.clear()
     env.clean()
@@ -314,7 +317,7 @@ if __name__ == '__main__':
     # run parameters
     parser.add_argument('--env', help='choose the gym env- tested on {Pendulum-v0}', default='pyperrace')
     parser.add_argument('--random-seed', help='random seed for repeatability', default=12131)
-    parser.add_argument('--max-episodes', help='max num of episodes to do while training', default=100)
+    parser.add_argument('--max-episodes', help='max num of episodes to do while training', default=20)
     parser.add_argument('--max-episode-len', help='max length of 1 episode', default=40)
     parser.add_argument('--summary-dir', help='directory for storing tensorboard info', default='./results')
     parser.add_argument('--save-experience-dir', help='directory for saving experiences', default='./experience')
@@ -328,7 +331,7 @@ if __name__ == '__main__':
     parser.add_argument('--load-all-env-ref-buffer-dir', help='saving networks to this folder', default='./env_ref_buffer')
     parser.add_argument('--save-graph-episodes', help='save graph in every x epides', default=1000)
     parser.add_argument('--save-image-episodes', help='save image in every x epides', default=100)
-    parser.add_argument('--show-display', help='show env in window', default='allstep')
+    parser.add_argument('--show-display', help='show env in window', default='')
 
 
 
