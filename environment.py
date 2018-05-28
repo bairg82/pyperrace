@@ -21,6 +21,8 @@ from skimage.color import rgb2gray
 from math import sqrt
 import os
 import pickle
+from scipy.spatial.distance import cdist
+import time
 
 import tracks
 import cars
@@ -83,9 +85,7 @@ class PaperRaceEnv:
         # referencia buffer inicializalas
         self.ref_buffer = {}
         self.ref_buffer_unsaved = 0
-        self.ref_buffer_load(load_env_ref_buffer, load_all_dir=load_all_env_ref_buffer_dir)
-
-        # self.ref_buffer_load()
+        # self.ref_buffer_load(load_env_ref_buffer, load_all_dir=load_all_env_ref_buffer_dir)
 
         # beolvassa a pályát
         self.trk_pic = mpimg.imread(trk_pic_file)
@@ -129,8 +129,11 @@ class PaperRaceEnv:
         self.prev_pos_in = np.array([0, 0])
         self.prev_pos_out = np.array([0, 0])
 
-        self.dists_in, self.dist_in_max = self.__get_dists_in(False) # a kezdőponttól való "távolságot" tárolja a reward fv-hez
-        self.dists_out, self.dist_out_max = self.__get_dists_out(False) # a kezdőponttól való "távolságot" tárolja
+        self.dists_in, self.dists_in_pos = self.__get_dists_in(False) # a kezdőponttól való "távolságot" tárolja a reward fv-hez
+        self.dists_out, self.dists_out_pos = self.__get_dists_out(False) # a kezdőponttól való "távolságot" tárolja
+
+        self.dist_in_max = len(self.dists_in_pos)
+        self.dist_out_max = len(self.dists_out_pos)
 
         # a referencia megallapitashoz meg ugye nem lehet referenciat hasznalni
         self.use_ref_time = False
@@ -384,7 +387,8 @@ class PaperRaceEnv:
         if self.end:
             if self.finish:
                 # step reward on finish is distance travelled and time reward
-                self.step_reward = self.step_pos_reward * 100.0 + self.game_reward
+                # self.step_reward = self.step_pos_reward * 100.0 + self.game_reward
+                self.step_reward = self.step_pos_reward * 100.0 - 100.0
             else:
                 # ha lement, tul lassu, visszakezd stb. akkor amit meg a palyan megtett plusz a buntetes
                 # kell a palyan megtett mert ket rossz kozul igy el lehet donteni melyik volt kevesbe rossz -> tanulas
@@ -530,7 +534,7 @@ class PaperRaceEnv:
         if self.gg_actions is None:
             self.gg_actions = [None] * 361 # -180..180-ig, fokonként megnézzük a sugarat.
             for act in range(-180, 181):
-                if -180 <= act < 180:
+                if -180 <= act <= 180:
                     # a GGpic 41x41-es B&W bmp. A közepétől nézzük, meddig fehér. (A közepén,
                     # csak hogy látszódjon, van egy fekete pont!
                     xsrt, ysrt = 21, 21
@@ -676,11 +680,27 @@ class PaperRaceEnv:
         else:
             return False
 
+
+    def get_pos_ref_on_side(self, position):
+        # https://codereview.stackexchange.com/questions/28207/finding-the-closest-point-to-a-list-of-points
+        # from scipy.spatial.distance import cdist
+        # cdist(XA, XB, metric='euclidean', p=2, V=None, VI=None, w=None)
+
+        # ha a posiciot mar egyszer kiszamoltuk
+        curr_dist_in = cdist([position], self.dists_in_pos).argmin()
+        pos_in = self.dists_in_pos[curr_dist_in]
+
+        curr_dist_out = cdist([position], self.dists_out_pos).argmin()
+        pos_out = self.dists_out_pos[curr_dist_out]
+
+        return curr_dist_in, pos_in, curr_dist_out, pos_out
+
     # TODO it is very slow
     # TODO it is used many times
     # there is a better way
     # https://stackoverflow.com/questions/307445/finding-closest-non-black-pixel-in-an-image-fast
-    def get_pos_ref_on_side(self, position):
+    def get_pos_ref_on_side_old(self, position):
+        starttime = time.time()
 
         """Ref adatokat ado fuggveny.
         posision csak palyan levo pont lehet, ha enm akkor hibat fog adni.
@@ -833,6 +853,7 @@ class PaperRaceEnv:
         if self.ref_buffer_unsaved >= 1000:
             self.ref_buffer_unsave = 0
             self.ref_buffer_save()
+        print('dists: ' + str(starttime -time.time()))
         return curr_dist_in, pos_in, curr_dist_out, pos_out
 
     def ref_buffer_save(self):
@@ -1006,7 +1027,7 @@ class PaperRaceEnv:
         """
 
         dist_dict_in = {} # dictionary, (pálya belső pontja, távolság) párokat tartalmaz
-
+        dist_points = []
         # a generalashoz a start pozicio alapbol startvonal kozepe lenne. De valahogy a startvonal kozeleben a dist az
         # szar tud lenni ezert az algoritmus kezdo pontjat a startvonal kicsit visszabbra tesszuk.
         #
@@ -1049,6 +1070,7 @@ class PaperRaceEnv:
                 point = point + jobb_ford
 
             dist_dict_in[tuple(point)] = dist # a pontot belerakjuk a dictionarybe
+            dist_points.append(point)
 
             if draw:
                 self.draw_section([point[0]], [point[1]], 'y')
@@ -1056,7 +1078,7 @@ class PaperRaceEnv:
             if np.array_equal(point, start_point): # ha visszaértünk az elejére, akkor leállunk
                 break
 
-        return dist_dict_in, dist
+        return dist_dict_in, dist_points
 
     def __get_dists_out(self, draw=False):
         """
@@ -1070,7 +1092,7 @@ class PaperRaceEnv:
         """
 
         dist_dict_out = {} # dictionary, (pálya külső pontja, távolság) párokat tartalmaz
-
+        dist_points = []
         # a generalashoz a start pozicio alapbol startvonal kozepe lenne. De valahogy a startvonal kozeleben a dist az
         # szar tud lenni ezert az algoritmus kezdo pontjat a startvonal kicsit visszabbra tesszuk.
         # (TODO: megerteni miert szarakodik a dist, es kijavitani)
@@ -1128,11 +1150,12 @@ class PaperRaceEnv:
                 break
 
             dist_dict_out[tuple(point)] = dist # a pontot belerakjuk a dictionarybe
+            dist_points.append(point)
 
-        return dist_dict_out, dist
+        return dist_dict_out, dist_points
 
     def clean(self):
-        self.ref_buffer_save()
+        # self.ref_buffer_save()
         del self.ref_buffer
         del self.players
 

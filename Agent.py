@@ -343,9 +343,9 @@ class ActorCritic(object):
         #terminal is a boolen 1d array
         for k in range(batch_size):
             if t_batch[k]:
-                y_i.append(r_batch[k])
+                y_i.append(r_batch[k]*0.01)
             else:
-                y_i.append(r_batch[k] + self.critic.gamma * target_q[k])
+                y_i.append(r_batch[k]*0.01 + self.critic.gamma * target_q[k][0])
 
         # Update the critic given the targets
         predicted_q_value, _ = self.critic.train(s_batch, a_batch, np.reshape(y_i, (batch_size, 1)))
@@ -360,7 +360,7 @@ class ActorCritic(object):
         # Update target networks
         self.actor.update_target_network()
         self.critic.update_target_network()
-        return np.amax(predicted_q_value)
+        return np.amax(predicted_q_value*100)
 
     def save(self, additional_info):
         path = self.network_dir + '/full_network_e' + additional_info + '.tfl'
